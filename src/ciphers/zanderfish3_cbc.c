@@ -14,6 +14,7 @@ struct zander3_state {
     uint64_t K3[80][4];
     uint64_t K4[80][2];
     uint64_t D[4];
+    uint64_t S[4];
     uint64_t last[4];
     uint64_t next[4];
     int rounds;
@@ -135,161 +136,142 @@ void z3gen_subkeys(struct zander3_state * state, unsigned char * key, int keylen
     }
 }
 
-void z3block_encrypt(struct zander3_state * state, uint64_t *xl, uint64_t *xr, uint64_t *xp, uint64_t *xq) {
+void z3block_encrypt(struct zander3_state * state) {
     int i;
-    uint64_t Xr, Xl, Xp, Xq, temp;
-
-    Xl = *xl;
-    Xr = *xr;
-    Xp = *xp;
-    Xq = *xq;
+    uint64_t temp;
 
     for (i = 0; i < state->rounds; i++) {
-/* Confusion */
-        Xq += state->K[i][0];
-        Xr += Xq + state->K[i][1];
-        Xl = zander3_rotl(Xl, 18) ^ Xp;
 
-        Xp += state->K[i][2];
-        Xl += Xp + state->K[i][3];
-        Xq = zander3_rotl(Xq, 26) ^ Xr;
+        state->S[3] += state->K[i][0];
+        state->S[1] += state->S[3] + state->K[i][1];
+        state->S[0] = zander3_rotl(state->S[0], 18) ^ state->S[2];
 
-        Xr += Xq + t0;
-        Xl += Xp + state->K2[i][0];
-        Xp = zander3_rotl(Xp, 14) ^ Xl;
+        state->S[2] += state->K[i][2];
+        state->S[0] += state->S[2] + state->K[i][3];
+        state->S[3] = zander3_rotl(state->S[3], 26) ^ state->S[1];
 
-        Xq += state->K2[i][1];
-        Xp += Xq;
-        Xr = zander3_rotl(Xr, 16) ^ Xq;
+        state->S[1] += state->S[3] + t0;
+        state->S[0] += state->S[2] + state->K2[i][0];
+        state->S[2] = zander3_rotl(state->S[2], 14) ^ state->S[0];
+
+        state->S[3] += state->K2[i][1];
+        state->S[2] += state->S[3];
+        state->S[1] = zander3_rotl(state->S[1], 16) ^ state->S[3];
         
-        Xl += state->K2[i][2];
-        Xr += Xl;
-        Xq = zander3_rotl(Xq, 34) ^ Xp;
+        state->S[0] += state->K2[i][2];
+        state->S[1] += state->S[0];
+        state->S[3] = zander3_rotl(state->S[3], 34) ^ state->S[2];
 
-        Xr += state->K2[i][3];
-        Xp += Xq;
-        Xl = zander3_rotl(Xl, 28) ^ Xq;
+        state->S[1] += state->K2[i][3];
+        state->S[2] += state->S[3];
+        state->S[0] = zander3_rotl(state->S[0], 28) ^ state->S[3];
 
-        Xp += Xl;
-        Xq += Xr;
-        Xr = zander3_rotl(Xr, 22) ^ Xl;
+        state->S[2] += state->S[0];
+        state->S[3] += state->S[1];
+        state->S[1] = zander3_rotl(state->S[1], 22) ^ state->S[0];
 
-        Xq += Xp;
-        Xl += Xr;
-        Xp = zander3_rotl(Xp, 46) ^ Xr;
+        state->S[3] += state->S[2];
+        state->S[0] += state->S[1];
+        state->S[2] = zander3_rotl(state->S[2], 46) ^ state->S[1];
  
-/* Diffusion */
 
-        Xl = zander3_rotr(Xl, 46);
-        Xl += Xq;
-        Xl ^= state->K4[i][0];
+        state->S[0] = zander3_rotr(state->S[0], 46);
+        state->S[0] += state->S[3];
+        state->S[0] ^= state->K4[i][0];
 
-        Xr = zander3_rotr(Xr, 34);
-        Xr += Xp + t1;
-        Xr ^= state->K4[i][1];
+        state->S[1] = zander3_rotr(state->S[1], 34);
+        state->S[1] += state->S[2] + t1;
+        state->S[1] ^= state->K4[i][1];
 
-        Xp = zander3_rotl(Xp, 4);
-        Xp ^= Xr;
+        state->S[2] = zander3_rotl(state->S[2], 4);
+        state->S[2] ^= state->S[1];
         
-        Xq = zander3_rotl(Xq, 6);
-        Xq ^= Xl;
+        state->S[3] = zander3_rotl(state->S[3], 6);
+        state->S[3] ^= state->S[0];
 
-        Xl += state->K3[i][2];
-        Xr += state->K3[i][3];
-        Xp += state->K3[i][1];
-        Xq += state->K3[i][0];
+        state->S[0] += state->K3[i][2];
+        state->S[1] += state->K3[i][3];
+        state->S[2] += state->K3[i][1];
+        state->S[3] += state->K3[i][0];
 
     }
-    *xl = Xl + state->D[3];
-    *xr = Xr + state->D[2];
-    *xp = Xp + state->D[1]; 
-    *xq = Xq + state->D[0];
 
 }
 
-void z3block_decrypt(struct zander3_state * state, uint64_t *xl, uint64_t *xr, uint64_t *xp, uint64_t *xq) {
+void z3block_decrypt(struct zander3_state * state) {
     int i;
-    uint64_t Xr, Xl, Xp, Xq, temp;
+    uint64_t temp;
     
-    Xl = *xl;
-    Xr = *xr;
-    Xp = *xp;
-    Xq = *xq;
-    Xl -= state->D[3];
-    Xr -= state->D[2];
-    Xp -= state->D[1];
-    Xq -= state->D[0];
+    state->S[0] -= state->D[3];
+    state->S[1] -= state->D[2];
+    state->S[2] -= state->D[1];
+    state->S[3] -= state->D[0];
 
     for (i = (state->rounds - 1); i != -1; i--) {
 
-        Xq -= state->K3[i][0];
-        Xp -= state->K3[i][1];
-        Xr -= state->K3[i][3];
-        Xl -= state->K3[i][2];
+        state->S[3] -= state->K3[i][0];
+        state->S[2] -= state->K3[i][1];
+        state->S[1] -= state->K3[i][3];
+        state->S[0] -= state->K3[i][2];
 
-        Xq ^= Xl;
-        Xq = zander3_rotr(Xq, 6);
+        state->S[3] ^= state->S[0];
+        state->S[3] = zander3_rotr(state->S[3], 6);
 
-        Xp ^= Xr;
-        Xp = zander3_rotr(Xp, 4);
+        state->S[2] ^= state->S[1];
+        state->S[2] = zander3_rotr(state->S[2], 4);
 
-        Xr ^= state->K4[i][1];
-        Xr -= Xp + t1;
-        Xr = zander3_rotl(Xr, 34);
+        state->S[1] ^= state->K4[i][1];
+        state->S[1] -= state->S[2] + t1;
+        state->S[1] = zander3_rotl(state->S[1], 34);
 
-        Xl ^= state->K4[i][0];
-        Xl -= Xq;
-        Xl = zander3_rotl(Xl, 46);
+        state->S[0] ^= state->K4[i][0];
+        state->S[0] -= state->S[3];
+        state->S[0] = zander3_rotl(state->S[0], 46);
 
 
-        temp = Xp ^ Xr;
-        Xp = zander3_rotr(temp, 46);
-        Xl -= Xr;
-        Xq -= Xp;
+        temp = state->S[2] ^ state->S[1];
+        state->S[2] = zander3_rotr(temp, 46);
+        state->S[0] -= state->S[1];
+        state->S[3] -= state->S[2];
 
-        temp = Xr ^ Xl;
-        Xr = zander3_rotr(temp, 22);
-        Xq -= Xr;
-        Xp -= Xl;
+        temp = state->S[1] ^ state->S[0];
+        state->S[1] = zander3_rotr(temp, 22);
+        state->S[3] -= state->S[1];
+        state->S[2] -= state->S[0];
 
-        temp = Xl ^ Xq;
-        Xl = zander3_rotr(temp, 28);
-        Xp -= Xq;
-        Xr -= state->K2[i][3];
+        temp = state->S[0] ^ state->S[3];
+        state->S[0] = zander3_rotr(temp, 28);
+        state->S[2] -= state->S[3];
+        state->S[1] -= state->K2[i][3];
 
-        temp = Xq ^ Xp;
-        Xq = zander3_rotr(temp, 34);
-        Xr -= Xl;
-        Xl -= state->K2[i][2];
+        temp = state->S[3] ^ state->S[2];
+        state->S[3] = zander3_rotr(temp, 34);
+        state->S[1] -= state->S[0];
+        state->S[0] -= state->K2[i][2];
 
-        temp = Xr ^ Xq;
-        Xr = zander3_rotr(temp, 16);
-        Xp -= Xq;
-        Xq -= state->K2[i][1];
+        temp = state->S[1] ^ state->S[3];
+        state->S[1] = zander3_rotr(temp, 16);
+        state->S[2] -= state->S[3];
+        state->S[3] -= state->K2[i][1];
 
-        temp = Xp ^ Xl;
-        Xp = zander3_rotr(temp, 14);
-        Xl -= Xp + state->K2[i][0];
-        Xr -= Xq + t0;
+        temp = state->S[2] ^ state->S[0];
+        state->S[2] = zander3_rotr(temp, 14);
+        state->S[0] -= state->S[2] + state->K2[i][0];
+        state->S[1] -= state->S[3] + t0;
 
      
-        temp = Xq ^ Xr;
-        Xq = zander3_rotr(temp, 26);
-        Xl -= Xp + state->K[i][3];
-        Xp -= state->K[i][2];
+        temp = state->S[3] ^ state->S[1];
+        state->S[3] = zander3_rotr(temp, 26);
+        state->S[0] -= state->S[2] + state->K[i][3];
+        state->S[2] -= state->K[i][2];
 
-        temp = Xl ^ Xp;
-        Xl = zander3_rotr(temp, 18);
-        Xr -= Xq + state->K[i][1];
-        Xq -= state->K[i][0];
+        temp = state->S[0] ^ state->S[2];
+        state->S[0] = zander3_rotr(temp, 18);
+        state->S[1] -= state->S[3] + state->K[i][1];
+        state->S[3] -= state->K[i][0];
 
         
     }
-    *xl = Xl;
-    *xr = Xr;
-    *xp = Xp;
-    *xq = Xq;
-    
 }
 
 void zander3_cbc_encrypt_kf(unsigned char * keyblob, int datalen, char *outputfile, int key_length, int nonce_length, int mac_length, int kdf_iterations, int keywrap_ivlen, int bufsize, unsigned char * password) {
@@ -312,10 +294,7 @@ void zander3_cbc_encrypt_kf(unsigned char * keyblob, int datalen, char *outputfi
     fwrite(K, 1, key_length, outfile);
 
     struct zander3_state state;
-    uint64_t xl;
-    uint64_t xr;
-    uint64_t xp;
-    uint64_t xq;
+
     int blocksize = 32;
     uint64_t blocks = datalen / bufsize;
     int extrabytes = blocksize - (datalen % blocksize);
@@ -365,55 +344,55 @@ void zander3_cbc_encrypt_kf(unsigned char * keyblob, int datalen, char *outputfi
         }
         for (b = 0; b < bblocks; b++) {
 	 
-            xl = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
-            xr = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
-            xp = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
-            xq = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
+            state.S[0] = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
+            state.S[1] = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
+            state.S[2] = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
+            state.S[3] = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
        
-	    xl = xl ^ state.last[0];
-	    xr = xr ^ state.last[1];
-	    xp = xp ^ state.last[2];
-	    xq = xq ^ state.last[3];
+	    state.S[0] = state.S[0] ^ state.last[0];
+	    state.S[1] = state.S[1] ^ state.last[1];
+	    state.S[2] = state.S[2] ^ state.last[2];
+	    state.S[3] = state.S[3] ^ state.last[3];
 
-            z3block_encrypt(&state, &xl, &xr, &xp, &xq);
+            z3block_encrypt(&state);
 
-	    state.last[0] = xl;
-	    state.last[1] = xr;
-	    state.last[2] = xp;
-	    state.last[3] = xq;
+	    state.last[0] = state.S[0];
+	    state.last[1] = state.S[1];
+	    state.last[2] = state.S[2];
+	    state.last[3] = state.S[3];
         
-            buffer[c] = (xl & 0xFF00000000000000) >> 56;
-            buffer[c+1] = (xl & 0x00FF000000000000) >> 48;
-            buffer[c+2] = (xl & 0x0000FF0000000000) >> 40;
-            buffer[c+3] = (xl & 0x000000FF00000000) >> 32;
-            buffer[c+4] = (xl & 0x00000000FF000000) >> 24;
-            buffer[c+5] = (xl & 0x0000000000FF0000) >> 16;
-            buffer[c+6] = (xl & 0x000000000000FF00) >> 8;
-            buffer[c+7] = (xl & 0x00000000000000FF);
-            buffer[c+8] = (xr & 0xFF00000000000000) >> 56;
-            buffer[c+9] = (xr & 0x00FF000000000000) >> 48;
-            buffer[c+10] = (xr & 0x0000FF0000000000) >> 40;
-            buffer[c+11] = (xr & 0x000000FF00000000) >> 32;
-            buffer[c+12] = (xr & 0x00000000FF000000) >> 24;
-            buffer[c+13] = (xr & 0x0000000000FF0000) >> 16;
-            buffer[c+14] = (xr & 0x000000000000FF00) >> 8;
-            buffer[c+15] = (xr & 0x00000000000000FF);
-            buffer[c+16] = (xp & 0xFF00000000000000) >> 56;
-            buffer[c+17] = (xp & 0x00FF000000000000) >> 48;
-            buffer[c+18] = (xp & 0x0000FF0000000000) >> 40;
-            buffer[c+19] = (xp & 0x000000FF00000000) >> 32;
-            buffer[c+20] = (xp & 0x00000000FF000000) >> 24;
-            buffer[c+21] = (xp & 0x0000000000FF0000) >> 16;
-            buffer[c+22] = (xp & 0x000000000000FF00) >> 8;
-            buffer[c+23] = (xp & 0x00000000000000FF);
-            buffer[c+24] = (xq & 0xFF00000000000000) >> 56;
-            buffer[c+25] = (xq & 0x00FF000000000000) >> 48;
-            buffer[c+26] = (xq & 0x0000FF0000000000) >> 40;
-            buffer[c+27] = (xq & 0x000000FF00000000) >> 32;
-            buffer[c+28] = (xq & 0x00000000FF000000) >> 24;
-            buffer[c+29] = (xq & 0x0000000000FF0000) >> 16;
-            buffer[c+30] = (xq & 0x000000000000FF00) >> 8;
-            buffer[c+31] = (xq & 0x00000000000000FF);
+            buffer[c] = (state.S[0] & 0xFF00000000000000) >> 56;
+            buffer[c+1] = (state.S[0] & 0x00FF000000000000) >> 48;
+            buffer[c+2] = (state.S[0] & 0x0000FF0000000000) >> 40;
+            buffer[c+3] = (state.S[0] & 0x000000FF00000000) >> 32;
+            buffer[c+4] = (state.S[0] & 0x00000000FF000000) >> 24;
+            buffer[c+5] = (state.S[0] & 0x0000000000FF0000) >> 16;
+            buffer[c+6] = (state.S[0] & 0x000000000000FF00) >> 8;
+            buffer[c+7] = (state.S[0] & 0x00000000000000FF);
+            buffer[c+8] = (state.S[1] & 0xFF00000000000000) >> 56;
+            buffer[c+9] = (state.S[1] & 0x00FF000000000000) >> 48;
+            buffer[c+10] = (state.S[1] & 0x0000FF0000000000) >> 40;
+            buffer[c+11] = (state.S[1] & 0x000000FF00000000) >> 32;
+            buffer[c+12] = (state.S[1] & 0x00000000FF000000) >> 24;
+            buffer[c+13] = (state.S[1] & 0x0000000000FF0000) >> 16;
+            buffer[c+14] = (state.S[1] & 0x000000000000FF00) >> 8;
+            buffer[c+15] = (state.S[1] & 0x00000000000000FF);
+            buffer[c+16] = (state.S[2] & 0xFF00000000000000) >> 56;
+            buffer[c+17] = (state.S[2] & 0x00FF000000000000) >> 48;
+            buffer[c+18] = (state.S[2] & 0x0000FF0000000000) >> 40;
+            buffer[c+19] = (state.S[2] & 0x000000FF00000000) >> 32;
+            buffer[c+20] = (state.S[2] & 0x00000000FF000000) >> 24;
+            buffer[c+21] = (state.S[2] & 0x0000000000FF0000) >> 16;
+            buffer[c+22] = (state.S[2] & 0x000000000000FF00) >> 8;
+            buffer[c+23] = (state.S[2] & 0x00000000000000FF);
+            buffer[c+24] = (state.S[3] & 0xFF00000000000000) >> 56;
+            buffer[c+25] = (state.S[3] & 0x00FF000000000000) >> 48;
+            buffer[c+26] = (state.S[3] & 0x0000FF0000000000) >> 40;
+            buffer[c+27] = (state.S[3] & 0x000000FF00000000) >> 32;
+            buffer[c+28] = (state.S[3] & 0x00000000FF000000) >> 24;
+            buffer[c+29] = (state.S[3] & 0x0000000000FF0000) >> 16;
+            buffer[c+30] = (state.S[3] & 0x000000000000FF00) >> 8;
+            buffer[c+31] = (state.S[3] & 0x00000000000000FF);
             c += 32;
         }
         fwrite(buffer, 1, bufsize, outfile);
@@ -451,10 +430,6 @@ void zander3_cbc_decrypt_kf(char * inputfile, int key_length, int nonce_length, 
 
     struct zander3_state state;
     int count = 0;
-    uint64_t xl;
-    uint64_t xr;
-    uint64_t xp;
-    uint64_t xq;
     int blocksize = 32;
     uint64_t blocks = datalen / bufsize;
     int extra = datalen % bufsize;
@@ -480,59 +455,59 @@ void zander3_cbc_decrypt_kf(char * inputfile, int key_length, int nonce_length, 
             }
             fread(buffer, 1, bufsize, infile);
             c = 0;
-            xl = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
-            xr = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
-            xp = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
-            xq = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
+            state.S[0] = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
+            state.S[1] = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
+            state.S[2] = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
+            state.S[3] = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
         
-	    state.next[0] = xl;
-	    state.next[1] = xr;
-	    state.next[2] = xp;
-	    state.next[3] = xq;
+	    state.next[0] = state.S[0];
+	    state.next[1] = state.S[1];
+	    state.next[2] = state.S[2];
+	    state.next[3] = state.S[3];
 
-            z3block_decrypt(&state, &xl, &xr, &xp, &xq);
+            z3block_decrypt(&state);
        
-            xl = xl ^ state.last[0];
-            xr = xr ^ state.last[1];
-            xp = xp ^ state.last[2];
-            xq = xq ^ state.last[3];
+            state.S[0] = state.S[0] ^ state.last[0];
+            state.S[1] = state.S[1] ^ state.last[1];
+            state.S[2] = state.S[2] ^ state.last[2];
+            state.S[3] = state.S[3] ^ state.last[3];
             state.last[0] = state.next[0];
             state.last[1] = state.next[1];
             state.last[2] = state.next[2];
             state.last[3] = state.next[3];
         
-            buffer[c] = (xl & 0xFF00000000000000) >> 56;
-            buffer[c+1] = (xl & 0x00FF000000000000) >> 48;
-            buffer[c+2] = (xl & 0x0000FF0000000000) >> 40;
-            buffer[c+3] = (xl & 0x000000FF00000000) >> 32;
-            buffer[c+4] = (xl & 0x00000000FF000000) >> 24;
-            buffer[c+5] = (xl & 0x0000000000FF0000) >> 16;
-            buffer[c+6] = (xl & 0x000000000000FF00) >> 8;
-            buffer[c+7] = (xl & 0x00000000000000FF);
-            buffer[c+8] = (xr & 0xFF00000000000000) >> 56;
-            buffer[c+9] = (xr & 0x00FF000000000000) >> 48;
-            buffer[c+10] = (xr & 0x0000FF0000000000) >> 40;
-            buffer[c+11] = (xr & 0x000000FF00000000) >> 32;
-            buffer[c+12] = (xr & 0x00000000FF000000) >> 24;
-            buffer[c+13] = (xr & 0x0000000000FF0000) >> 16;
-            buffer[c+14] = (xr & 0x000000000000FF00) >> 8;
-            buffer[c+15] = (xr & 0x00000000000000FF);
-            buffer[c+16] = (xp & 0xFF00000000000000) >> 56;
-            buffer[c+17] = (xp & 0x00FF000000000000) >> 48;
-            buffer[c+18] = (xp & 0x0000FF0000000000) >> 40;
-            buffer[c+19] = (xp & 0x000000FF00000000) >> 32;
-            buffer[c+20] = (xp & 0x00000000FF000000) >> 24;
-            buffer[c+21] = (xp & 0x0000000000FF0000) >> 16;
-            buffer[c+22] = (xp & 0x000000000000FF00) >> 8;
-            buffer[c+23] = (xp & 0x00000000000000FF);
-            buffer[c+24] = (xq & 0xFF00000000000000) >> 56;
-            buffer[c+25] = (xq & 0x00FF000000000000) >> 48;
-            buffer[c+26] = (xq & 0x0000FF0000000000) >> 40;
-            buffer[c+27] = (xq & 0x000000FF00000000) >> 32;
-            buffer[c+28] = (xq & 0x00000000FF000000) >> 24;
-            buffer[c+29] = (xq & 0x0000000000FF0000) >> 16;
-            buffer[c+30] = (xq & 0x000000000000FF00) >> 8;
-            buffer[c+31] = (xq & 0x00000000000000FF);
+            buffer[c] = (state.S[0] & 0xFF00000000000000) >> 56;
+            buffer[c+1] = (state.S[0] & 0x00FF000000000000) >> 48;
+            buffer[c+2] = (state.S[0] & 0x0000FF0000000000) >> 40;
+            buffer[c+3] = (state.S[0] & 0x000000FF00000000) >> 32;
+            buffer[c+4] = (state.S[0] & 0x00000000FF000000) >> 24;
+            buffer[c+5] = (state.S[0] & 0x0000000000FF0000) >> 16;
+            buffer[c+6] = (state.S[0] & 0x000000000000FF00) >> 8;
+            buffer[c+7] = (state.S[0] & 0x00000000000000FF);
+            buffer[c+8] = (state.S[1] & 0xFF00000000000000) >> 56;
+            buffer[c+9] = (state.S[1] & 0x00FF000000000000) >> 48;
+            buffer[c+10] = (state.S[1] & 0x0000FF0000000000) >> 40;
+            buffer[c+11] = (state.S[1] & 0x000000FF00000000) >> 32;
+            buffer[c+12] = (state.S[1] & 0x00000000FF000000) >> 24;
+            buffer[c+13] = (state.S[1] & 0x0000000000FF0000) >> 16;
+            buffer[c+14] = (state.S[1] & 0x000000000000FF00) >> 8;
+            buffer[c+15] = (state.S[1] & 0x00000000000000FF);
+            buffer[c+16] = (state.S[2] & 0xFF00000000000000) >> 56;
+            buffer[c+17] = (state.S[2] & 0x00FF000000000000) >> 48;
+            buffer[c+18] = (state.S[2] & 0x0000FF0000000000) >> 40;
+            buffer[c+19] = (state.S[2] & 0x000000FF00000000) >> 32;
+            buffer[c+20] = (state.S[2] & 0x00000000FF000000) >> 24;
+            buffer[c+21] = (state.S[2] & 0x0000000000FF0000) >> 16;
+            buffer[c+22] = (state.S[2] & 0x000000000000FF00) >> 8;
+            buffer[c+23] = (state.S[2] & 0x00000000000000FF);
+            buffer[c+24] = (state.S[3] & 0xFF00000000000000) >> 56;
+            buffer[c+25] = (state.S[3] & 0x00FF000000000000) >> 48;
+            buffer[c+26] = (state.S[3] & 0x0000FF0000000000) >> 40;
+            buffer[c+27] = (state.S[3] & 0x000000FF00000000) >> 32;
+            buffer[c+28] = (state.S[3] & 0x00000000FF000000) >> 24;
+            buffer[c+29] = (state.S[3] & 0x0000000000FF0000) >> 16;
+            buffer[c+30] = (state.S[3] & 0x000000000000FF00) >> 8;
+            buffer[c+31] = (state.S[3] & 0x00000000000000FF);
             c += 32;
 
 	    if (i == (blocks - 1)) {
@@ -641,10 +616,6 @@ void zander3_cbc_encrypt(char *keyfile1, char *keyfile2, char * inputfile, char 
     fwrite(K, 1, key_length, outfile);
 
     struct zander3_state state;
-    uint64_t xl;
-    uint64_t xr;
-    uint64_t xp;
-    uint64_t xq;
     int blocksize = 32;
     uint64_t blocks = datalen / bufsize;
     int extrabytes = blocksize - (datalen % blocksize);
@@ -693,55 +664,55 @@ void zander3_cbc_encrypt(char *keyfile1, char *keyfile2, char * inputfile, char 
 	        }
 	    } */
 	 
-            xl = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
-            xr = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
-            xp = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
-            xq = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
+            state.S[0] = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
+            state.S[1] = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
+            state.S[2] = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
+            state.S[3] = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
        
-	    xl = xl ^ state.last[0];
-	    xr = xr ^ state.last[1];
-	    xp = xp ^ state.last[2];
-	    xq = xq ^ state.last[3];
+	    state.S[0] = state.S[0] ^ state.last[0];
+	    state.S[1] = state.S[1] ^ state.last[1];
+	    state.S[2] = state.S[2] ^ state.last[2];
+	    state.S[3] = state.S[3] ^ state.last[3];
 
-            z3block_encrypt(&state, &xl, &xr, &xp, &xq);
+            z3block_encrypt(&state);
 
-	    state.last[0] = xl;
-	    state.last[1] = xr;
-	    state.last[2] = xp;
-	    state.last[3] = xq;
+	    state.last[0] = state.S[0];
+	    state.last[1] = state.S[1];
+	    state.last[2] = state.S[2];
+	    state.last[3] = state.S[3];
         
-            buffer[c] = (xl & 0xFF00000000000000) >> 56;
-            buffer[c+1] = (xl & 0x00FF000000000000) >> 48;
-            buffer[c+2] = (xl & 0x0000FF0000000000) >> 40;
-            buffer[c+3] = (xl & 0x000000FF00000000) >> 32;
-            buffer[c+4] = (xl & 0x00000000FF000000) >> 24;
-            buffer[c+5] = (xl & 0x0000000000FF0000) >> 16;
-            buffer[c+6] = (xl & 0x000000000000FF00) >> 8;
-            buffer[c+7] = (xl & 0x00000000000000FF);
-            buffer[c+8] = (xr & 0xFF00000000000000) >> 56;
-            buffer[c+9] = (xr & 0x00FF000000000000) >> 48;
-            buffer[c+10] = (xr & 0x0000FF0000000000) >> 40;
-            buffer[c+11] = (xr & 0x000000FF00000000) >> 32;
-            buffer[c+12] = (xr & 0x00000000FF000000) >> 24;
-            buffer[c+13] = (xr & 0x0000000000FF0000) >> 16;
-            buffer[c+14] = (xr & 0x000000000000FF00) >> 8;
-            buffer[c+15] = (xr & 0x00000000000000FF);
-            buffer[c+16] = (xp & 0xFF00000000000000) >> 56;
-            buffer[c+17] = (xp & 0x00FF000000000000) >> 48;
-            buffer[c+18] = (xp & 0x0000FF0000000000) >> 40;
-            buffer[c+19] = (xp & 0x000000FF00000000) >> 32;
-            buffer[c+20] = (xp & 0x00000000FF000000) >> 24;
-            buffer[c+21] = (xp & 0x0000000000FF0000) >> 16;
-            buffer[c+22] = (xp & 0x000000000000FF00) >> 8;
-            buffer[c+23] = (xp & 0x00000000000000FF);
-            buffer[c+24] = (xq & 0xFF00000000000000) >> 56;
-            buffer[c+25] = (xq & 0x00FF000000000000) >> 48;
-            buffer[c+26] = (xq & 0x0000FF0000000000) >> 40;
-            buffer[c+27] = (xq & 0x000000FF00000000) >> 32;
-            buffer[c+28] = (xq & 0x00000000FF000000) >> 24;
-            buffer[c+29] = (xq & 0x0000000000FF0000) >> 16;
-            buffer[c+30] = (xq & 0x000000000000FF00) >> 8;
-            buffer[c+31] = (xq & 0x00000000000000FF);
+            buffer[c] = (state.S[0] & 0xFF00000000000000) >> 56;
+            buffer[c+1] = (state.S[0] & 0x00FF000000000000) >> 48;
+            buffer[c+2] = (state.S[0] & 0x0000FF0000000000) >> 40;
+            buffer[c+3] = (state.S[0] & 0x000000FF00000000) >> 32;
+            buffer[c+4] = (state.S[0] & 0x00000000FF000000) >> 24;
+            buffer[c+5] = (state.S[0] & 0x0000000000FF0000) >> 16;
+            buffer[c+6] = (state.S[0] & 0x000000000000FF00) >> 8;
+            buffer[c+7] = (state.S[0] & 0x00000000000000FF);
+            buffer[c+8] = (state.S[1] & 0xFF00000000000000) >> 56;
+            buffer[c+9] = (state.S[1] & 0x00FF000000000000) >> 48;
+            buffer[c+10] = (state.S[1] & 0x0000FF0000000000) >> 40;
+            buffer[c+11] = (state.S[1] & 0x000000FF00000000) >> 32;
+            buffer[c+12] = (state.S[1] & 0x00000000FF000000) >> 24;
+            buffer[c+13] = (state.S[1] & 0x0000000000FF0000) >> 16;
+            buffer[c+14] = (state.S[1] & 0x000000000000FF00) >> 8;
+            buffer[c+15] = (state.S[1] & 0x00000000000000FF);
+            buffer[c+16] = (state.S[2] & 0xFF00000000000000) >> 56;
+            buffer[c+17] = (state.S[2] & 0x00FF000000000000) >> 48;
+            buffer[c+18] = (state.S[2] & 0x0000FF0000000000) >> 40;
+            buffer[c+19] = (state.S[2] & 0x000000FF00000000) >> 32;
+            buffer[c+20] = (state.S[2] & 0x00000000FF000000) >> 24;
+            buffer[c+21] = (state.S[2] & 0x0000000000FF0000) >> 16;
+            buffer[c+22] = (state.S[2] & 0x000000000000FF00) >> 8;
+            buffer[c+23] = (state.S[2] & 0x00000000000000FF);
+            buffer[c+24] = (state.S[3] & 0xFF00000000000000) >> 56;
+            buffer[c+25] = (state.S[3] & 0x00FF000000000000) >> 48;
+            buffer[c+26] = (state.S[3] & 0x0000FF0000000000) >> 40;
+            buffer[c+27] = (state.S[3] & 0x000000FF00000000) >> 32;
+            buffer[c+28] = (state.S[3] & 0x00000000FF000000) >> 24;
+            buffer[c+29] = (state.S[3] & 0x0000000000FF0000) >> 16;
+            buffer[c+30] = (state.S[3] & 0x000000000000FF00) >> 8;
+            buffer[c+31] = (state.S[3] & 0x00000000000000FF);
             c += 32;
         }
         fwrite(buffer, 1, bufsize, outfile);
@@ -752,7 +723,7 @@ void zander3_cbc_encrypt(char *keyfile1, char *keyfile2, char * inputfile, char 
     qx_hmac_file_write(outputfile, mac_key);
 }
 
-void * zander3_cbc_decrypt(char * keyfile1, char * keyfile2, char * inputfile, char *outputfile, int key_length, int nonce_length, int mac_length, int kdf_iterations, int password_len,  int keywrap_ivlen, int mask_bytes, int bufsize, unsigned char * passphrase) {
+void zander3_cbc_decrypt(char * keyfile1, char * keyfile2, char * inputfile, char *outputfile, int key_length, int nonce_length, int mac_length, int kdf_iterations, int password_len,  int keywrap_ivlen, int mask_bytes, int bufsize, unsigned char * passphrase) {
     int pkctxt_len = 768;
     int S_len = 768;
     int Yctxt_len = 768;
@@ -802,10 +773,6 @@ void * zander3_cbc_decrypt(char * keyfile1, char * keyfile2, char * inputfile, c
 
     struct zander3_state state;
     int count = 0;
-    uint64_t xl;
-    uint64_t xr;
-    uint64_t xp;
-    uint64_t xq;
     int blocksize = 32;
     uint64_t blocks = datalen / bufsize;
     int extra = datalen % bufsize;
@@ -836,59 +803,59 @@ void * zander3_cbc_decrypt(char * keyfile1, char * keyfile2, char * inputfile, c
                 bblocks += 1;
             }
             for (b = 0; b < bblocks; b++) {
-                xl = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
-                xr = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
-                xp = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
-                xq = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
+                state.S[0] = ((uint64_t)buffer[c] << 56) + ((uint64_t)buffer[c+1] << 48) + ((uint64_t)buffer[c+2] << 40) + ((uint64_t)buffer[c+3] << 32) + ((uint64_t)buffer[c+4] << 24) + ((uint64_t)buffer[c+5] << 16) + ((uint64_t)buffer[c+6] << 8) + (uint64_t)buffer[c+7];
+                state.S[1] = ((uint64_t)buffer[c+8] << 56) + ((uint64_t)buffer[c+9] << 48) + ((uint64_t)buffer[c+10] << 40) + ((uint64_t)buffer[c+11] << 32) + ((uint64_t)buffer[c+12] << 24) + ((uint64_t)buffer[c+13] << 16) + ((uint64_t)buffer[c+14] << 8) + (uint64_t)buffer[c+15];
+                state.S[2] = ((uint64_t)buffer[c+16] << 56) + ((uint64_t)buffer[c+17] << 48) + ((uint64_t)buffer[c+18] << 40) + ((uint64_t)buffer[c+19] << 32) + ((uint64_t)buffer[c+20] << 24) + ((uint64_t)buffer[c+21] << 16) + ((uint64_t)buffer[c+22] << 8) + (uint64_t)buffer[c+23];
+                state.S[3] = ((uint64_t)buffer[c+24] << 56) + ((uint64_t)buffer[c+25] << 48) + ((uint64_t)buffer[c+26] << 40) + ((uint64_t)buffer[c+27] << 32) + ((uint64_t)buffer[c+28] << 24) + ((uint64_t)buffer[c+29] << 16) + ((uint64_t)buffer[c+30] << 8) + (uint64_t)buffer[c+31];
         
-	        state.next[0] = xl;
-	        state.next[1] = xr;
-	        state.next[2] = xp;
-	        state.next[3] = xq;
+	        state.next[0] = state.S[0];
+	        state.next[1] = state.S[1];
+	        state.next[2] = state.S[2];
+	        state.next[3] = state.S[3];
 
-                z3block_decrypt(&state, &xl, &xr, &xp, &xq);
+                z3block_decrypt(&state);
         
-	        xl = xl ^ state.last[0];
-	        xr = xr ^ state.last[1];
-	        xp = xp ^ state.last[2];
-	        xq = xq ^ state.last[3];
+	        state.S[0] = state.S[0] ^ state.last[0];
+	        state.S[1] = state.S[1] ^ state.last[1];
+	        state.S[2] = state.S[2] ^ state.last[2];
+	        state.S[3] = state.S[3] ^ state.last[3];
 	        state.last[0] = state.next[0];
 	        state.last[1] = state.next[1];
 	        state.last[2] = state.next[2];
 	        state.last[3] = state.next[3];
         
-                buffer[c] = (xl & 0xFF00000000000000) >> 56;
-                buffer[c+1] = (xl & 0x00FF000000000000) >> 48;
-                buffer[c+2] = (xl & 0x0000FF0000000000) >> 40;
-                buffer[c+3] = (xl & 0x000000FF00000000) >> 32;
-                buffer[c+4] = (xl & 0x00000000FF000000) >> 24;
-                buffer[c+5] = (xl & 0x0000000000FF0000) >> 16;
-                buffer[c+6] = (xl & 0x000000000000FF00) >> 8;
-                buffer[c+7] = (xl & 0x00000000000000FF);
-                buffer[c+8] = (xr & 0xFF00000000000000) >> 56;
-                buffer[c+9] = (xr & 0x00FF000000000000) >> 48;
-                buffer[c+10] = (xr & 0x0000FF0000000000) >> 40;
-                buffer[c+11] = (xr & 0x000000FF00000000) >> 32;
-                buffer[c+12] = (xr & 0x00000000FF000000) >> 24;
-                buffer[c+13] = (xr & 0x0000000000FF0000) >> 16;
-                buffer[c+14] = (xr & 0x000000000000FF00) >> 8;
-                buffer[c+15] = (xr & 0x00000000000000FF);
-                buffer[c+16] = (xp & 0xFF00000000000000) >> 56;
-                buffer[c+17] = (xp & 0x00FF000000000000) >> 48;
-                buffer[c+18] = (xp & 0x0000FF0000000000) >> 40;
-                buffer[c+19] = (xp & 0x000000FF00000000) >> 32;
-                buffer[c+20] = (xp & 0x00000000FF000000) >> 24;
-                buffer[c+21] = (xp & 0x0000000000FF0000) >> 16;
-                buffer[c+22] = (xp & 0x000000000000FF00) >> 8;
-                buffer[c+23] = (xp & 0x00000000000000FF);
-                buffer[c+24] = (xq & 0xFF00000000000000) >> 56;
-                buffer[c+25] = (xq & 0x00FF000000000000) >> 48;
-                buffer[c+26] = (xq & 0x0000FF0000000000) >> 40;
-                buffer[c+27] = (xq & 0x000000FF00000000) >> 32;
-                buffer[c+28] = (xq & 0x00000000FF000000) >> 24;
-                buffer[c+29] = (xq & 0x0000000000FF0000) >> 16;
-                buffer[c+30] = (xq & 0x000000000000FF00) >> 8;
-                buffer[c+31] = (xq & 0x00000000000000FF);
+                buffer[c] = (state.S[0] & 0xFF00000000000000) >> 56;
+                buffer[c+1] = (state.S[0] & 0x00FF000000000000) >> 48;
+                buffer[c+2] = (state.S[0] & 0x0000FF0000000000) >> 40;
+                buffer[c+3] = (state.S[0] & 0x000000FF00000000) >> 32;
+                buffer[c+4] = (state.S[0] & 0x00000000FF000000) >> 24;
+                buffer[c+5] = (state.S[0] & 0x0000000000FF0000) >> 16;
+                buffer[c+6] = (state.S[0] & 0x000000000000FF00) >> 8;
+                buffer[c+7] = (state.S[0] & 0x00000000000000FF);
+                buffer[c+8] = (state.S[1] & 0xFF00000000000000) >> 56;
+                buffer[c+9] = (state.S[1] & 0x00FF000000000000) >> 48;
+                buffer[c+10] = (state.S[1] & 0x0000FF0000000000) >> 40;
+                buffer[c+11] = (state.S[1] & 0x000000FF00000000) >> 32;
+                buffer[c+12] = (state.S[1] & 0x00000000FF000000) >> 24;
+                buffer[c+13] = (state.S[1] & 0x0000000000FF0000) >> 16;
+                buffer[c+14] = (state.S[1] & 0x000000000000FF00) >> 8;
+                buffer[c+15] = (state.S[1] & 0x00000000000000FF);
+                buffer[c+16] = (state.S[2] & 0xFF00000000000000) >> 56;
+                buffer[c+17] = (state.S[2] & 0x00FF000000000000) >> 48;
+                buffer[c+18] = (state.S[2] & 0x0000FF0000000000) >> 40;
+                buffer[c+19] = (state.S[2] & 0x000000FF00000000) >> 32;
+                buffer[c+20] = (state.S[2] & 0x00000000FF000000) >> 24;
+                buffer[c+21] = (state.S[2] & 0x0000000000FF0000) >> 16;
+                buffer[c+22] = (state.S[2] & 0x000000000000FF00) >> 8;
+                buffer[c+23] = (state.S[2] & 0x00000000000000FF);
+                buffer[c+24] = (state.S[3] & 0xFF00000000000000) >> 56;
+                buffer[c+25] = (state.S[3] & 0x00FF000000000000) >> 48;
+                buffer[c+26] = (state.S[3] & 0x0000FF0000000000) >> 40;
+                buffer[c+27] = (state.S[3] & 0x000000FF00000000) >> 32;
+                buffer[c+28] = (state.S[3] & 0x00000000FF000000) >> 24;
+                buffer[c+29] = (state.S[3] & 0x0000000000FF0000) >> 16;
+                buffer[c+30] = (state.S[3] & 0x000000000000FF00) >> 8;
+                buffer[c+31] = (state.S[3] & 0x00000000000000FF);
                 c += 32;
             }
 
