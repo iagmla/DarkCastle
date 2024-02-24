@@ -541,9 +541,9 @@ void zander3_cbc_decrypt_kf(char * inputfile, int key_length, int nonce_length, 
             sknum[pi] = (char)kf_blob[pos];
             pos += 1;
         }
-        int skn = atoi(sknum);
-        unsigned char sk[skn];
-        for (int pi = 0; pi < (skn); pi++) {
+        //int skn = atoi(sknum);
+        unsigned char sk[1536];
+        for (int pi = 0; pi < (1536); pi++) {
             sk[pi] = kf_blob[pos];
             pos += 1;
         }
@@ -552,16 +552,15 @@ void zander3_cbc_decrypt_kf(char * inputfile, int key_length, int nonce_length, 
             Ssknum[pi] = (char)kf_blob[pos];
             pos += 1;
         }
-        int Sskn = atoi(Ssknum);
-        unsigned char Ssk[Sskn];
-        for (int pi = 0; pi < (Sskn); pi++) {
+        //int Sskn = atoi(Ssknum);
+        unsigned char Ssk[1536];
+        for (int pi = 0; pi < (1536); pi++) {
             Ssk[pi] = kf_blob[pos];
             pos += 1;
         }
 
-        BN_bin2bn(sk, skn, ctx->sk);
-        BN_bin2bn(Ssk, Sskn, Sctx->sk);
-        const char *sk_dec = BN_bn2dec(ctx->sk);
+        BN_bin2bn(sk, 1536, ctx->sk);
+        BN_bin2bn(Ssk, 1536, Sctx->sk);
 
         free(kf_blob);
     }    
