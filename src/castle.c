@@ -15,7 +15,7 @@
 #include "ciphers/qapla.c"
 
 void usage() {
-    printf("DarkCastle v1.668 - by KryptoMagik\n\n");
+    printf("DarkCastle v1.668 - by KryptoMagick\n\n");
     printf("Algorithms:\n***********\nqapla            256 bit\nzanderfish2-cbc  256 bit\nzanderfish2-ofb  256 bit\nzanderfish3      256 bit\nzanderfish3-ofb  256 bit\n\n");
     printf("Usage:\ncastle <algorithm> -e <input file> <output file> <public keyfile> <secret keyfile>\n");
     printf("castle <algorithm> -d <input file> <output file> <secret keyfile> <public keyfile>\n");
