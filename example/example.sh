@@ -1,3 +1,3 @@
 #!/bin/bash
 
-castle qapla -e msg test.enc castle_test.pk castle_hello.sk && castle qapla -d test.enc test.dec castle_test.sk castle_test.pk
+castle -e msg msg.enc hello.pk test.sk && castle -d msg.enc msg.dec test.pk hello.sk

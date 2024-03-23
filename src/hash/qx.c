@@ -160,15 +160,13 @@ void qx_output(struct qx_state * state, uint8_t * digest) {
 }
 
 void qx_hash_file(char * filename, uint8_t *digest) {
-    uint8_t key[32] = {0};
+    uint8_t key[32] = {1};
     struct qx_state state;
     qx_init(&state);
     int rounds = 64;
-    qx_absorb(&state, key);
     qx_rounds(&state, rounds);
     FILE *infile;
     int blocksize = 32;
-    int bufsize = 32;
     infile = fopen(filename, "rb");
     fseek(infile, 0, SEEK_END);
     uint64_t datalen = ftell(infile);
@@ -181,13 +179,14 @@ void qx_hash_file(char * filename, uint8_t *digest) {
     for (uint64_t b = 0; b < blocks; b++) {
         uint8_t block[32] = {0};
         if ((b == (blocks - 1)) && (extra != 0)) {
-            bufsize = extra;
+            blocksize = extra;
         }
-        fread(block, 1, bufsize, infile);
+        fread(&block, 1, blocksize, infile);
         qx_absorb(&state, block);
         qx_rounds(&state, rounds);
     }
     fclose(infile);
+    qx_output(&state, digest);
 }
 
 void qx_hash_file_offset(char * filename, uint8_t *digest, int offset) {
@@ -220,6 +219,7 @@ void qx_hash_file_offset(char * filename, uint8_t *digest, int offset) {
         qx_rounds(&state, rounds);
     }
     fclose(infile);
+    qx_output(&state, digest);
 }
 
 void qx_hmac_file(char * filename, uint8_t * key, uint8_t *digest) {
@@ -358,7 +358,7 @@ int qx_hmac_file_read_verify_offset(char *filename, uint8_t *key, int offset) {
     fseek(infile, 0, SEEK_END);
     uint64_t datalen = ftell(infile);
     fseek(infile, 0, 0);
-    uint64_t mac_pos = datalen - 32;
+    uint64_t mac_pos = datalen - 32 - offset;
     datalen = datalen - 32;
     fseek(infile, mac_pos, 0);
     uint64_t pos = ftell(infile);
@@ -399,14 +399,10 @@ void qx_kdf(unsigned char *password, int passlen, unsigned char *key, int iters)
         qx_rounds(&state, rounds);
     }
     for (int i = 0; i < iters; i++) {
-        //qx_absorb(&state, block);
         qx_rounds(&state, rounds);
-        //qx_output(&state, block);
     }
     qx_output(&state, key);
 }
-
-/* used for testing purposes only */
 
 void qx_crypt(char * in, char *out, uint8_t * key) {
      uint8_t tmp[32] = {0};
@@ -448,22 +444,23 @@ void qx_crypt(char * in, char *out, uint8_t * key) {
 
 void sign_hash_write(struct qloq_ctx *Sctx, char *filename) {
     int S_len = 768;
-    unsigned char sig[S_len];
+    uint8_t sig[S_len];
+    uint8_t h[32];
+    uint8_t X[32];
+    uint8_t nonce[32];
     BIGNUM *S;
     S = BN_new();
     BIGNUM *H;
     H = BN_new();
-    unsigned char h[32];
     qx_hash_file(filename, h);
-    printf("hashed\n");
-    BN_bin2bn(h, 32, H);
-    printf("BIN2BN\n");
-    sign(&Sctx, S, H);
-    printf("signed\n");
+    urandom(nonce, 32);
+    mypad_encrypt(h, nonce, X);
+    BN_bin2bn(X, 32, H);
+    sign(Sctx, S, H);
     BN_bn2bin(S, sig);
-    printf("BN2BIN\n");
     FILE *infile;
     infile = fopen(filename, "a");
+    fwrite(nonce, 1, 32, infile);
     fwrite(sig, 1, S_len, infile);
     fclose(infile);
 }
@@ -471,27 +468,33 @@ void sign_hash_write(struct qloq_ctx *Sctx, char *filename) {
 void verify_sig_read(struct qloq_ctx *Sctx, char *filename) {
     int S_len = 768;
     uint8_t sig[S_len];
+    uint8_t X[32];
+    uint8_t nonce[32];
+    uint8_t h[32];
     BIGNUM *Ssig;
     Ssig = BN_new();
+    BIGNUM *S;
+    S = BN_new();
     BIGNUM *H;
     H = BN_new();
-    unsigned char h[32];
     FILE *infile;
-    int blocksize = 32;
-    int bufsize = 32;
-    qx_hash_file_offset(filename, h, S_len);
+    qx_hash_file_offset(filename, h, (S_len + 32));
     infile = fopen(filename, "rb");
     fseek(infile, 0, SEEK_END);
     uint64_t datalen = ftell(infile);
-    uint64_t pos = datalen - S_len;
+    uint64_t pos = datalen - S_len - 32;
     fseek(infile, 0, SEEK_SET);
     fseek(infile, pos, SEEK_SET);
+    fread(nonce, 1, 32, infile);
     fread(sig, 1, S_len, infile);
     fclose(infile);
-    BN_bin2bn(H, 32, h);
-    BN_bin2bn(Ssig, S_len, sig);
-    if (verify(&Sctx, H, Ssig) != 0) {
-        printf("Error: Signature verification failed. Message is not authentic.\n");
+    BN_bin2bn(sig, S_len, Ssig);
+    mypad_encrypt(nonce, h, X);
+    BN_bin2bn(X, 32, H);
+
+    if (verify(Sctx, Ssig, H) != 0) {
+        printf("Error: PK Signature verification failed. Message is not authentic.\n");
         exit(2);
     }
 }
+

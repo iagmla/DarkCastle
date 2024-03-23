@@ -1,9 +1,5 @@
-# Example
+# DarkTomb Example
 
-*** Passwords are the usernames
+User Test sends a message "Hello World!" to user Hello.
 
-Illustrates user hello sending to user test.
-
-castle zanderfish3 -e msg test.enc castle_test.pk castle_hello.sk
-
-castle zanderfish3 -d test.enc test.dec castle_test.sk castle_test.pk
+tomb akms-cbc -e msg msg.enc hello.pk test.sk && tomb akms-cbc -d msg.enc msg.dec test.pk hello.sk

@@ -2,20 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-void qloq_keygen(int psize, char * prefix, unsigned char * passphrase, unsigned char * kdf_salt, int kdf_iterations) {
+void qloq_keygen(int psize, char * prefix) {
     struct qloq_ctx ctx;
-    int result = keygen(&ctx, psize);
-    if (result == 0) {
-        printf("QloQ encryption public keys generated successfully.\n");
-    }
+    keygen(&ctx, psize);
+    printf("QloQ encryption public keys generated successfully.\n");
 
     struct qloq_ctx Sctx;
-    int Sresult = keygen(&Sctx, psize);
-    if (Sresult == 0) {
-        printf("QloQ signing public keys generated successfully.\n");
-    }
+    keygen(&Sctx, psize);
+    printf("QloQ signing public keys generated successfully.\n");
     pkg_pk(&ctx, &Sctx, prefix);
-
+    pkg_sk(&ctx, &Sctx, prefix);
+/*
     char *skfilename[256];
     strcpy(skfilename, prefix);
     strcat(skfilename, ".sk");
@@ -23,5 +20,9 @@ void qloq_keygen(int psize, char * prefix, unsigned char * passphrase, unsigned 
     int total = pkg_sk_bytes_count(&ctx, &Sctx);
     unsigned char *keyblob[total];
     pkg_sk_bytes(&ctx, &Sctx, keyblob);
-    zander3_cbc_encrypt_kf(keyblob, total, skfilename, 32, 32, 32, kdf_iterations, 16, 32, passphrase);
+    FILE *skfile;
+    skfile = fopen(skfilename, "wb");
+    fwrite(keyblob, 1, total, skfile);
+    fclose(skfile);
+*/
 }

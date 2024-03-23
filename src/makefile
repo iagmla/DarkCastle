@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O3 -std=c99 -w -lssl -lcrypto -std=c99 -I/usr/local/opt/openssl/include -L/usr/local/opt/openssl/lib -g
+CFLAGS=-O3 -std=c99 -w -lssl -lcrypto -I/usr/local/opt/openssl/include -L/usr/local/opt/openssl/lib
 TARGET=castle
 KEYGEN=castle-keygen
 all: $(TARGET) $(KEYGEN)
