@@ -151,6 +151,7 @@ void qapla_encrypt(char *inputfile, char *outputfile, char *pkfile, char *skfile
             bufsize = extra;
         }
         fread(block, 1, bufsize, infile);
+        qapla_F(&state);
         qapla_xor_block(&state, block);
         fwrite(block, 1, bufsize, outfile);
     }
@@ -221,6 +222,7 @@ void qapla_decrypt(char *inputfile, char *outputfile, char *pkfile, char *skfile
             bufsize = extra;
         }
         fread(block, 1, bufsize, infile);
+        qapla_F(&state);
         qapla_xor_block(&state, block);
         fwrite(block, 1, bufsize, outfile);
     }
