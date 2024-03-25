@@ -11,3 +11,7 @@ void file_present(char *filename) {
         exit(1);
     }
 }
+
+uint64_t rotateleft64(uint64_t a, uint64_t b) {
+    return ((a << b) | (a >> (64 - b)));
+}
