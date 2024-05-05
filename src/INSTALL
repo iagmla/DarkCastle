@@ -1,0 +1,13 @@
+- INSTALL Instructions
+
+Linux
+
+Install the libssl-dev package.  Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
+
+MacOS
+
+Be sure Xcode is installed.  Install via Homebrew the openssl package.  Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
+
+FreeBSD
+
+Change the first line of the makefile to CC=clang.  Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
