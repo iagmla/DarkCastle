@@ -5,7 +5,7 @@
 #include "keygen/keygen.c"
 
 void keygen_usage() {
-    printf("usage: tomb-keygen <file prefix>\n");
+    printf("usage: castle-keygen <file prefix>\n");
 }
 
 int main(int argc, char *argv[]) {
