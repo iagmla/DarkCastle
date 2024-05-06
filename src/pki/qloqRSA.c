@@ -586,10 +586,10 @@ int keygen(struct qloq_ctx *ctx, int psize) {
             randstat = RAND_status();
         }
 
-        int p_result = BN_generate_prime_ex2(p, psize, 0, NULL, NULL, NULL, bnctx);
-        int q_result = BN_generate_prime_ex2(q, psize, 0, NULL, NULL, NULL, bnctx);
-        int a_result = BN_generate_prime_ex2(a, psize, 0, NULL, NULL, NULL, bnctx);
-        int b_result = BN_generate_prime_ex2(b, psize, 0, NULL, NULL, NULL, bnctx);
+        int p_result = BN_generate_prime_ex(p, psize, 0, NULL, NULL, NULL);
+        int q_result = BN_generate_prime_ex(q, psize, 0, NULL, NULL, NULL);
+        int a_result = BN_generate_prime_ex(a, psize, 0, NULL, NULL, NULL);
+        int b_result = BN_generate_prime_ex(b, psize, 0, NULL, NULL, NULL);
         /* Generate the modulus */
         BN_mul(ctx->n, p, q, bnctx);
         /* Generate the mask */
