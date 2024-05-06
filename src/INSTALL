@@ -11,3 +11,15 @@ Be sure Xcode is installed.  Install via Homebrew the openssl package.  Run `mak
 FreeBSD
 
 Change the first line of the makefile to CC=clang.  Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
+
+OpenBSD
+
+Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
+
+Solaris
+
+Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
+
+-- Optional
+
+For a brand new install of Solaris 11.4, update the system by executing `pkg update --accept`.  Install openssl v3 `pkg install openssl-3`.
