@@ -16,6 +16,10 @@ OpenBSD
 
 Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
 
+NetBSD
+
+Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
+
 Solaris
 
 Run `make` in the src directory.  Copy the binaries to a common path (i.e. /usr/local/bin).
