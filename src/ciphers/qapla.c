@@ -7,20 +7,24 @@ uint64_t Q[2] = {
 0x98d57011ef2469a7, 0x0c7e53dd9eb185bc,
 };
 
-
 struct qapla_state {
-     uint64_t r[8];
-     uint64_t o[4];
-     int rounds;
+    uint64_t r[8];
+    uint64_t o[4];
+    uint64_t y[8];
+    int rounds;
 };
 
 void qapla_F(struct qapla_state *state) {
     int i;
-    uint64_t x;
-    uint64_t y[8];
-    for (i = 0; i < 8; i++) {
-        y[i] = state->r[i];
-    }
+    state->y[0] = state->r[0];
+    state->y[1] = state->r[1];
+    state->y[2] = state->r[2];
+    state->y[3] = state->r[3];
+    state->y[4] = state->r[4];
+    state->y[5] = state->r[5];
+    state->y[6] = state->r[6];
+    state->y[7] = state->r[7];
+
     for (i = 0; i < state->rounds; i++) {
         state->r[0] += state->r[7];
         state->r[1] = rotateleft64((state->r[1] ^ state->r[0]), 9);
@@ -39,12 +43,20 @@ void qapla_F(struct qapla_state *state) {
         state->r[7] += state->r[6];
         state->r[0] = rotateleft64((state->r[0] ^ state->r[1]), 18);
     }
-    for (i = 0; i < 8; i++) {
-        state->r[i] = state->r[i] + y[i];
-    }
-    for (i = 0; i < 4; i++) {
-        state->o[i] = state->r[i] ^ state->r[(i + 4) & 0x07];
-    }
+
+    state->r[0] = state->r[0] + state->y[0];
+    state->r[1] = state->r[1] + state->y[1];
+    state->r[2] = state->r[2] + state->y[2];
+    state->r[3] = state->r[3] + state->y[3];
+    state->r[4] = state->r[4] + state->y[4];
+    state->r[5] = state->r[5] + state->y[5];
+    state->r[6] = state->r[6] + state->y[6];
+    state->r[7] = state->r[7] + state->y[7];
+
+    state->o[0] = state->r[0] ^ state->r[4];
+    state->o[1] = state->r[1] ^ state->r[5];
+    state->o[2] = state->r[2] ^ state->r[6];
+    state->o[3] = state->r[3] ^ state->r[7];
 }
 
 
