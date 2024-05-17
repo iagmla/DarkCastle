@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdint.h>
 
+/* ZanderFish3 */
+/* by KryptoMagick (Karl Zander) */
+
 int z3blocklen = 32;
 
 int t0 = 0x57bf953b78f054bc;

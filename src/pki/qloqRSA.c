@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <openssl/bn.h>
 
+/* QloQ */
+/* by KryptoMagick (Karl Zander) */
+
 struct qloq_ctx {
     BIGNUM *sk;
     BIGNUM *pk;

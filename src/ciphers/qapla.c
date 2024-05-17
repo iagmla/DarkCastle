@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdint.h>
 
+/* Qapla */
+/* by KryptoMagick (Karl Zander) */
+
 uint64_t Q[2] = {
 0x98d57011ef2469a7, 0x0c7e53dd9eb185bc,
 };
@@ -26,22 +29,22 @@ void qapla_F(struct qapla_state *state) {
     state->y[7] = state->r[7];
 
     for (i = 0; i < state->rounds; i++) {
-        state->r[0] += state->r[7];
-        state->r[1] = rotateleft64((state->r[1] ^ state->r[0]), 9);
-        state->r[2] += state->r[5];
-        state->r[3] = rotateleft64((state->r[3] ^ state->r[2]), 21);
-        state->r[4] += state->r[3];
-        state->r[5] = rotateleft64((state->r[5] ^ state->r[4]), 12);
-        state->r[6] += state->r[1];
-        state->r[7] = rotateleft64((state->r[7] ^ state->r[6]), 18);
-        state->r[1] += state->r[0];
-        state->r[2] = rotateleft64((state->r[2] ^ state->r[7]), 9);
-        state->r[3] += state->r[2];
-        state->r[4] = rotateleft64((state->r[4] ^ state->r[5]), 21);
-        state->r[5] += state->r[4];
-        state->r[6] = rotateleft64((state->r[6] ^ state->r[3]), 12);
-        state->r[7] += state->r[6];
-        state->r[0] = rotateleft64((state->r[0] ^ state->r[1]), 18);
+        state->r[0] ^= state->r[1];
+        state->r[1] += rotateleft64((state->r[3] ^ state->r[0]), 9);
+        state->r[2] ^= state->r[5];
+        state->r[3] += rotateleft64((state->r[1] ^ state->r[2]), 21);
+        state->r[4] ^= state->r[3];
+        state->r[5] += rotateleft64((state->r[7] ^ state->r[4]), 12);
+        state->r[6] ^= state->r[7];
+        state->r[7] += rotateleft64((state->r[5] ^ state->r[6]), 18);
+        state->r[1] ^= state->r[6];
+        state->r[2] += rotateleft64((state->r[4] ^ state->r[3]), 9);
+        state->r[3] ^= state->r[2];
+        state->r[4] += rotateleft64((state->r[0] ^ state->r[5]), 21);
+        state->r[5] ^= state->r[4];
+        state->r[6] += rotateleft64((state->r[4] ^ state->r[1]), 12);
+        state->r[7] ^= state->r[0];
+        state->r[0] += rotateleft64((state->r[6] ^ state->r[7]), 18);
     }
 
     state->r[0] += state->y[0];
@@ -74,9 +77,7 @@ void qapla_keysetup(struct qapla_state *state, uint8_t *key, uint8_t *nonce) {
     state->r[6] = ((uint64_t)nonce[0] << 56) + ((uint64_t)nonce[1] << 48) + ((uint64_t)nonce[2] << 40) + ((uint64_t)nonce[3] << 32) + ((uint64_t)nonce[4] << 24) + ((uint64_t)nonce[5] << 16) + ((uint64_t)nonce[6] << 8) + (uint64_t)nonce[7];
     state->r[7] = ((uint64_t)nonce[8] << 56) + ((uint64_t)nonce[9] << 48) + ((uint64_t)nonce[10] << 40) + ((uint64_t)nonce[11] << 32) + ((uint64_t)nonce[12] << 24) + ((uint64_t)nonce[13] << 16) + ((uint64_t)nonce[14] << 8) + (uint64_t)nonce[15];
 
-    for (i = 0; i < 64; i++) {
-        qapla_F(state);
-    }
+    qapla_F(state);
 }
 
 void qapla_xor_block(struct qapla_state *state, uint8_t *block) {

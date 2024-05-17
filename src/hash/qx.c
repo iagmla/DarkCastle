@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+/* QX */
+/* by KryptoMagick (Karl Zander) */
+
 uint32_t qx_c0[16] = {0x923c44fc, 0xf867f0f6, 0xc2e5cc28, 0x8ecebfd4, 0xcb632744, 0x90a142fa, 0xea942e3a, 0x9c70db80, 0xba55d7e1, 0xe3b1f8a2, 0xc60865e0, 0xf8112cc2, 0x93d6b989, 0xc1cf8477, 0x812b7f3c, 0x8c776893};
 
 uint32_t rotateleft32(uint32_t a, uint32_t b) {
