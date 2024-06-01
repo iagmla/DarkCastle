@@ -6,4 +6,4 @@ DarkCastle is an authenticated file encryption program aiming to provide 256 bit
 
 DarkCastle allows for general file encryption or file exchange between two people using Q'loQ public keys.
 
-*** Works on Linux, MacOS
+*** Works on Linux, MacOS, FreeBSD, NetBSD, OpenBSD, Solaris

@@ -1,21 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-
 /* ZanderFish3 */
 /* by KryptoMagick (Karl Zander) */
+/* Key lengths (256/512) bit */
 
-int z3blocklen = 32;
-
-int t0 = 0x57bf953b78f054bc;
-int t1 = 0x0a78a94e98868e69;
+uint64_t c0[8] = {0x960197a5259271e3, 0xf709d2bf05fa7062, 0xf85e97d298dc5738, 0xbf7f2dfcfd287281, 0xf2b28a5c657627ce, 0xfb25129e749adfac, 0xff1cd21a0d77cfa5, 0x982199f72c4174c3};
 
 struct zander3_state {
     uint64_t K[80][4];
-    uint64_t K2[80][4];
-    uint64_t K3[80][4];
-    uint64_t K4[80][2];
     uint64_t D[4];
     uint64_t S[4];
     uint64_t last[4];
@@ -24,7 +14,7 @@ struct zander3_state {
 };
 
 struct z3ksa_state {
-    uint64_t r[16];
+    uint64_t r[8];
     uint64_t o;
 };
 
@@ -36,236 +26,157 @@ uint64_t zander3_rotr(uint64_t a, int b) {
     return ((a >> b) | (a << (64 - b)));
 }
 
-void zander3_F(struct z3ksa_state *state) {
-    int r;
-    for (r = 0; r < 16; r++) {
-        state->r[0] += state->r[6];
-        state->r[1] ^= state->r[15];
-        state->r[2] = zander3_rotl((state->r[2] ^ state->r[12]), 9);
-        state->r[3] += state->r[9];
-        state->r[4] ^= state->r[11];
-        state->r[5] = zander3_rotr((state->r[5] ^ state->r[10]), 6);
-        state->r[6] += state->r[13];
-        state->r[7] ^= state->r[8];
-        state->r[8] = zander3_rotl((state->r[8] ^ state->r[3]), 11);
-        state->r[9] += state->r[1];
-        state->r[10] ^= state->r[4];
-        state->r[11] = zander3_rotr((state->r[8] ^ state->r[7]), 7);
-        state->r[12] += state->r[0];
-        state->r[13] ^= state->r[2];
-        state->r[14] = zander3_rotl((state->r[14] ^ state->r[0]), 3);
-        state->r[15] += state->r[5];
+void zander3_ksa_update(struct z3ksa_state *state) {
+    state->r[0] ^= zander3_rotl(state->r[3], 18) + state->r[4];
+    state->r[1] += zander3_rotl(state->r[0], 26) ^ state->r[5];
+    state->r[2] ^= zander3_rotl(state->r[1] + state->r[6], 13);
+    state->r[3] += zander3_rotl(state->r[2] ^ state->r[7], 29);
+    state->r[4] ^= zander3_rotl(state->r[6], 34) + state->r[0];
+    state->r[5] += zander3_rotl(state->r[7], 28) ^ state->r[1];
+    state->r[6] ^= zander3_rotl(state->r[4] + state->r[2], 17);
+    state->r[7] += zander3_rotl(state->r[5] ^ state->r[3], 45);
 
-        state->r[15] += state->r[6];
-        state->r[2] ^= state->r[15];
-        state->r[14] = zander3_rotl((state->r[14] ^ state->r[12]), 9);
-        state->r[4] += state->r[9];
-        state->r[13] ^= state->r[11];
-        state->r[6] = zander3_rotr((state->r[6] ^ state->r[10]), 6);
-        state->r[12] += state->r[13];
-        state->r[8] ^= state->r[8];
-        state->r[11] = zander3_rotl((state->r[11] ^ state->r[3]), 11);
-        state->r[10] += state->r[1];
-        state->r[1] ^= state->r[4];
-        state->r[3] = zander3_rotr((state->r[3] ^ state->r[7]), 7);
-        state->r[5] += state->r[0];
-        state->r[7] ^= state->r[2];
-        state->r[9] = zander3_rotl((state->r[9] ^ state->r[0]), 3);
-        state->r[0] += state->r[5];
-    }
     state->o = 0;
-    for (r = 0; r < 16; r++) {
-        state->o ^= state->r[r];
-    }
+    state->o ^= state->r[0];
+    state->o ^= state->r[1];
+    state->o ^= state->r[2];
+    state->o ^= state->r[3];
+    state->o ^= state->r[4];
+    state->o ^= state->r[5];
+    state->o ^= state->r[6];
+    state->o ^= state->r[7];
 }
 
 void zander3_ksa(struct zander3_state * state, uint8_t * key, int keylen) {
     struct z3ksa_state kstate;
     int c = 0;
-    int i;
-    int s;
+    int i, s;
     state->rounds = ((keylen / 4) + ((keylen / 8) + (48 - (keylen / 8))));
     memset(state->K, 0, state->rounds*(4*sizeof(uint64_t)));
-    memset(state->K2, 0, state->rounds*(4*sizeof(uint64_t)));
-    memset(state->K3, 0, state->rounds*(4*sizeof(uint64_t)));
-    memset(state->K4, 0, state->rounds*(2*sizeof(uint64_t)));
-    memset(&kstate.r, 0, 16*sizeof(uint64_t));
+    memset(&kstate.r, 0, 8*sizeof(uint64_t));
     memset(&kstate.o, 0, sizeof(uint64_t));
+    kstate.r[0] = c0[0];
+    kstate.r[1] = c0[1];
+    kstate.r[2] = c0[2];
+    kstate.r[3] = c0[3];
+    kstate.r[4] = c0[4];
+    kstate.r[5] = c0[5];
+    kstate.r[6] = c0[6];
+    kstate.r[7] = c0[7];
 
     for (i = 0; i < (keylen / 8); i++) {
-        kstate.r[i] = ((uint64_t)key[c] << 56) + ((uint64_t)key[c+1] << 48) + ((uint64_t)key[c+2] << 40) + ((uint64_t)key[c+3] << 32) + ((uint64_t)key[c+4] << 24) + ((uint64_t)key[c+5] << 16) + ((uint64_t)key[c+6] << 8) + (uint64_t)key[c+7];
+        kstate.r[i] ^= ((uint64_t)key[c] << 56) + ((uint64_t)key[c+1] << 48) + ((uint64_t)key[c+2] << 40) + ((uint64_t)key[c+3] << 32) + ((uint64_t)key[c+4] << 24) + ((uint64_t)key[c+5] << 16) + ((uint64_t)key[c+6] << 8) + (uint64_t)key[c+7];
         c += 8;
     }
     for (i = 0; i < state->rounds; i++) {
         for (s = 0; s < 4; s++) {
-            zander3_F(&kstate);
-            state->K[i][s] = 0;
+            zander3_ksa_update(&kstate);
             state->K[i][s] = kstate.o;
         }
     }
-    for (i = 0; i < state->rounds; i++) {
-        for (s = 0; s < 4; s++) {
-            zander3_F(&kstate);
-            state->K2[i][s] = 0;
-            state->K2[i][s] = kstate.o;
-        }
-    }
-    for (i = 0; i < state->rounds; i++) {
-        for (s = 0; s < 4; s++) {
-            zander3_F(&kstate);
-            state->K3[i][s] = 0;
-            state->K3[i][s] = kstate.o;
-        }
-    }
-    for (i = 0; i < state->rounds; i++) {
-        for (s = 0; s < 2; s++) {
-            zander3_F(&kstate);
-            state->K4[i][s] = 0;
-            state->K4[i][s] = kstate.o;
-        }
-    }
     for (s = 0; s < 4; s++) {
-        zander3_F(&kstate);
-        state->D[s] = 0;
+        zander3_ksa_update(&kstate);
         state->D[s] = kstate.o;
     }
 }
 
 void zander3_encrypt_block(struct zander3_state * state) {
-    int r;
-    uint64_t temp;
+    for (int r = 0; r < state->rounds; r++) {
 
-    for (r = 0; r < state->rounds; r++) {
-
-        state->S[3] += state->K[r][0];
-        state->S[1] += state->S[3] + state->K[r][1];
-        state->S[0] = zander3_rotl(state->S[0], 18) ^ state->S[2];
-
-        state->S[2] += state->K[r][2];
-        state->S[0] += state->S[2] + state->K[r][3];
-        state->S[3] = zander3_rotl(state->S[3], 26) ^ state->S[1];
-
-        state->S[1] += state->S[3] + t0;
-        state->S[0] += state->S[2] + state->K2[r][0];
-        state->S[2] = zander3_rotl(state->S[2], 14) ^ state->S[0];
-
-        state->S[3] += state->K2[r][1];
-        state->S[2] += state->S[3];
-        state->S[1] = zander3_rotl(state->S[1], 16) ^ state->S[3];
-
-        state->S[0] += state->K2[r][2];
-        state->S[1] += state->S[0];
-        state->S[3] = zander3_rotl(state->S[3], 34) ^ state->S[2];
-
-        state->S[1] += state->K2[r][3];
-        state->S[2] += state->S[3];
-        state->S[0] = zander3_rotl(state->S[0], 28) ^ state->S[3];
-
-        state->S[2] += state->S[0];
+        state->S[1] += state->S[2];
         state->S[3] += state->S[1];
-        state->S[1] = zander3_rotl(state->S[1], 22) ^ state->S[0];
+        state->S[0] = zander3_rotl(state->S[0], 18) ^ state->S[3];
 
-        state->S[3] += state->S[2];
-        state->S[0] += state->S[1];
-        state->S[2] = zander3_rotl(state->S[2], 46) ^ state->S[1];
+        state->S[0] += state->S[2];
+        state->S[2] += state->S[0];
+        state->S[1] = zander3_rotl(state->S[1], 26) ^ state->S[2];
 
-
-        state->S[0] = zander3_rotr(state->S[0], 46);
         state->S[0] += state->S[3];
-        state->S[0] ^= state->K4[r][0];
+        state->S[2] = zander3_rotl(state->S[2], 13) ^ state->S[0];
 
-        state->S[1] = zander3_rotr(state->S[1], 34);
-        state->S[1] += state->S[2] + t1;
-        state->S[1] ^= state->K4[r][1];
+        state->S[1] += state->S[2];
+        state->S[3] = zander3_rotl(state->S[3], 29) ^ state->S[1];
 
-        state->S[2] = zander3_rotl(state->S[2], 4);
-        state->S[2] ^= state->S[1];
+        state->S[1] += state->S[3];
+        state->S[0] = zander3_rotl(state->S[0], 34) ^ state->S[1];
 
-        state->S[3] = zander3_rotl(state->S[3], 6);
-        state->S[3] ^= state->S[0];
+        state->S[3] += state->S[0];
+        state->S[2] = zander3_rotl(state->S[2], 28) ^ state->S[3];
 
-        state->S[0] += state->K3[r][0];
-        state->S[1] += state->K3[r][1];
-        state->S[2] += state->K3[r][2];
-        state->S[3] += state->K3[r][3];
+        state->S[0] += state->S[2];
+        state->S[0] ^= state->K[r][0];
+        state->S[3] = zander3_rotl(state->S[3], 17) ^ state->S[0];
+        state->S[3] ^= state->K[r][3];
+
+        state->S[2] += state->S[3];
+        state->S[2] ^= state->K[r][2];
+        state->S[1] = zander3_rotl(state->S[1], 45) ^ state->S[2];
+        state->S[1] ^= state->K[r][1];
+
+        state->S[3] ^= state->S[2];
+        state->S[2] ^= state->S[3];
+        state->S[1] ^= state->S[0];
+        state->S[0] ^= state->S[1];
 
     }
-    state->S[0] += state->D[0];
-    state->S[1] += state->D[1];
-    state->S[2] += state->D[2];
-    state->S[3] += state->D[3];
+    state->S[0] ^= state->D[0];
+    state->S[1] ^= state->D[1];
+    state->S[2] ^= state->D[2];
+    state->S[3] ^= state->D[3];
 }
 
 void zander3_decrypt_block(struct zander3_state * state) {
-    int r;
     uint64_t temp;
 
-    state->S[3] -= state->D[3];
-    state->S[2] -= state->D[2];
-    state->S[1] -= state->D[1];
-    state->S[0] -= state->D[0];
+    state->S[3] ^= state->D[3];
+    state->S[2] ^= state->D[2];
+    state->S[1] ^= state->D[1];
+    state->S[0] ^= state->D[0];
 
-    for (r = (state->rounds - 1); r != -1; r--) {
+    for (int r = (state->rounds - 1); r != -1; r--) {
 
-        state->S[3] -= state->K3[r][3];
-        state->S[2] -= state->K3[r][2];
-        state->S[1] -= state->K3[r][1];
-        state->S[0] -= state->K3[r][0];
+        state->S[0] ^= state->S[1];
+        state->S[1] ^= state->S[0];
+        state->S[2] ^= state->S[3];
+        state->S[3] ^= state->S[2];
 
-        state->S[3] ^= state->S[0];
-        state->S[3] = zander3_rotr(state->S[3], 6);
-
-        state->S[2] ^= state->S[1];
-        state->S[2] = zander3_rotr(state->S[2], 4);
-
-        state->S[1] ^= state->K4[r][1];
-        state->S[1] -= state->S[2] + t1;
-        state->S[1] = zander3_rotl(state->S[1], 34);
-
-        state->S[0] ^= state->K4[r][0];
-        state->S[0] -= state->S[3];
-        state->S[0] = zander3_rotl(state->S[0], 46);
-
-        temp = state->S[2] ^ state->S[1];
-        state->S[2] = zander3_rotr(temp, 46);
-        state->S[0] -= state->S[1];
-        state->S[3] -= state->S[2];
-
-        temp = state->S[1] ^ state->S[0];
-        state->S[1] = zander3_rotr(temp, 22);
-        state->S[3] -= state->S[1];
-        state->S[2] -= state->S[0];
-
-        temp = state->S[0] ^ state->S[3];
-        state->S[0] = zander3_rotr(temp, 28);
+        state->S[1] ^= state->K[r][1];
+        temp = state->S[1] ^ state->S[2];
+        state->S[1] = zander3_rotr(temp, 45);
+        state->S[2] ^= state->K[r][2];
         state->S[2] -= state->S[3];
-        state->S[1] -= state->K2[r][3];
 
-        temp = state->S[3] ^ state->S[2];
-        state->S[3] = zander3_rotr(temp, 34);
-        state->S[1] -= state->S[0];
-        state->S[0] -= state->K2[r][2];
+        state->S[3] ^= state->K[r][3];
+        temp = state->S[3] ^ state->S[0];
+        state->S[3] = zander3_rotr(temp, 17);
+        state->S[0] ^= state->K[r][0];
+        state->S[0] -= state->S[2];
 
-        temp = state->S[1] ^ state->S[3];
-        state->S[1] = zander3_rotr(temp, 16);
-        state->S[2] -= state->S[3];
-        state->S[3] -= state->K2[r][1];
+        temp = state->S[2] ^ state->S[3];
+        state->S[2] = zander3_rotr(temp, 28);
+        state->S[3] -= state->S[0];
 
-        temp = state->S[2] ^ state->S[0];
-        state->S[2] = zander3_rotr(temp, 14);
-        state->S[0] -= state->S[2] + state->K2[r][0];
-        state->S[1] -= state->S[3] + t0;
-
+        temp = state->S[0] ^ state->S[1];
+        state->S[0] = zander3_rotr(temp, 34);
+        state->S[1] -= state->S[3];
 
         temp = state->S[3] ^ state->S[1];
-        state->S[3] = zander3_rotr(temp, 26);
-        state->S[0] -= state->S[2] + state->K[r][3];
-        state->S[2] -= state->K[r][2];
+        state->S[3] = zander3_rotr(temp, 29);
+        state->S[1] -= state->S[2];
 
-        temp = state->S[0] ^ state->S[2];
+        temp = state->S[2] ^ state->S[0];
+        state->S[2] = zander3_rotr(temp, 13);
+        state->S[0] -= state->S[3];
+
+        temp = state->S[1] ^ state->S[2];
+        state->S[1] = zander3_rotr(temp, 26);
+        state->S[2] -= state->S[0];
+        state->S[0] -= state->S[2];
+
+        temp = state->S[0] ^ state->S[3];
         state->S[0] = zander3_rotr(temp, 18);
-        state->S[1] -= state->S[3] + state->K[r][1];
-        state->S[3] -= state->K[r][0];
+        state->S[3] -= state->S[1];
+        state->S[1] -= state->S[2];
 
     }
 }

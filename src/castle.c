@@ -14,7 +14,7 @@
 /* by KryptoMagick (Karl Zander) */
 
 void usage() {
-    printf("DarkCastle v2.1.0 - by KryptoMagick\n\n");
+    printf("DarkCastle v2.2.0 - by KryptoMagick\n\n");
     printf("Algorithms:\n***********\nzanderfish3      256 bit\nqapla            256 bit\n\n");
     printf("Usage:\ncastle <algorithm> -e <input file> <output file> <pk file> <sk file>\n");
     printf("castle <algorithm> -d <input file> <output file> <pk file> <sk file>\n");
