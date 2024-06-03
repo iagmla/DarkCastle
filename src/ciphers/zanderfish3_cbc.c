@@ -1,6 +1,9 @@
 /* ZanderFish3 */
 /* by KryptoMagick (Karl Zander) */
 /* Key lengths (256/512) bit */
+/* 256 bit block size */
+/* 56 rounds 256 bit */
+/* 64 rounds 512 bit */
 
 uint64_t c0[8] = {0x960197a5259271e3, 0xf709d2bf05fa7062, 0xf85e97d298dc5738, 0xbf7f2dfcfd287281, 0xf2b28a5c657627ce, 0xfb25129e749adfac, 0xff1cd21a0d77cfa5, 0x982199f72c4174c3};
 

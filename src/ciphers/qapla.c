@@ -1,10 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-
 /* Qapla */
 /* by KryptoMagick (Karl Zander) */
+/* 256 bit key / 512 bit state */
+/* 20 rounds */
 
 uint64_t Q[2] = {
 0x98d57011ef2469a7, 0x0c7e53dd9eb185bc,
