@@ -1,3 +1,5 @@
+v2.4.0 - Addition of Nuqneh stream cipher
+
 v2.3.0 - Addition of ZanderFish4 in CBC mode
 
 v2.2.0 - ZanderFish3 key scheduler redesigned, improved strength and structure
