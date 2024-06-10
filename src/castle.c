@@ -11,13 +11,15 @@
 #include "ciphers/qapla.c"
 #include "ciphers/zanderfish4_cbc.c"
 #include "ciphers/nuqneh.c"
+#include "ciphers/akms2_cbc.c"
+#include "ciphers/jlyajbe.c"
 
 /* DarkCastle */
 /* by KryptoMagick (Karl Zander) */
 
 void usage() {
-    printf("DarkCastle v2.4.0 - by KryptoMagick\n\n");
-    printf("Algorithms:\n***********\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\n\n");
+    printf("DarkCastle v2.5.0 - by KryptoMagick\n\n");
+    printf("Algorithms:\n***********\nakms2            256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njlyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\n\n");
     printf("Usage:\ncastle <algorithm> -e <input file> <output file> <pk file> <sk file>\n");
     printf("castle <algorithm> -d <input file> <output file> <pk file> <sk file>\n");
 }
@@ -76,6 +78,22 @@ int main(int argc, char *argv[]) {
         }
         else if (strcmp(mode, decrypt_symbol) == 0) {
             nuqneh_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+        }
+    }
+    else if (strcmp(algorithm, "akms2") == 0) {
+        if (strcmp(mode, encrypt_symbol) == 0) {
+            akms2_cbc_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+        }
+        else if (strcmp(mode, decrypt_symbol) == 0) {
+            akms2_cbc_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+        }
+    }
+    else if (strcmp(algorithm, "jlyajbe") == 0) {
+        if (strcmp(mode, encrypt_symbol) == 0) {
+            jlyajbe_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+        }
+        else if (strcmp(mode, decrypt_symbol) == 0) {
+            jlyajbe_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
     }
     printf("\n");

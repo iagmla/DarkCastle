@@ -1,6 +1,6 @@
 /* Qapla */
 /* by KryptoMagick (Karl Zander) */
-/* 256 bit key / 512 bit state */
+/* 256 bit key / 512 bit state / 128 bit nonce */
 /* 20 rounds */
 
 uint64_t Q[2] = {
