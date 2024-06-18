@@ -14,13 +14,14 @@
 #include "ciphers/akms2_cbc.c"
 #include "ciphers/jlyajbe.c"
 #include "ciphers/satanx_cbc.c"
+#include "ciphers/zx.c"
 
 /* DarkCastle */
 /* by KryptoMagick (Karl Zander) */
 
 void usage() {
-    printf("DarkCastle v2.5.1 - by KryptoMagick\n\n");
-    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njlyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\n\n");
+    printf("DarkCastle v2.6.0 - by KryptoMagick\n\n");
+    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njlyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\nzx               256 bit\n\n");
     printf("Usage:\ncastle <algorithm> -e <input file> <output file> <pk file> <sk file>\n");
     printf("castle <algorithm> -d <input file> <output file> <pk file> <sk file>\n");
 }
@@ -103,6 +104,14 @@ int main(int argc, char *argv[]) {
         }   
         else if (strcmp(mode, decrypt_symbol) == 0) {
             satanx_cbc_decrypt(infile_name, outfile_name, pkfile_name, skfile_name); 
+        }
+    }
+    else if (strcmp(algorithm, "zx") == 0) {
+        if (strcmp(mode, encrypt_symbol) == 0) {
+            zx_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+        }
+        else if (strcmp(mode, decrypt_symbol) == 0) {
+            zx_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
     }
     printf("\n");

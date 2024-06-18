@@ -1,173 +1,233 @@
-#include <stdio.h>
-
 /* QX */
 /* by KryptoMagick (Karl Zander) */
+/* 256 bit input size / 800 bit state */
+/* 256 bit output */
+/* 25 rounds */
 
-uint32_t qx_c0[16] = {0x923c44fc, 0xf867f0f6, 0xc2e5cc28, 0x8ecebfd4, 0xcb632744, 0x90a142fa, 0xea942e3a, 0x9c70db80, 0xba55d7e1, 0xe3b1f8a2, 0xc60865e0, 0xf8112cc2, 0x93d6b989, 0xc1cf8477, 0x812b7f3c, 0x8c776893};
+uint32_t qx_c0[25] = {0x923c44fc, 0xf867f0f6, 0xc2e5cc28, 0x8ecebfd4, 0xcb632744, 0x90a142fa, 0xea942e3a, 0x9c70db80, 0xba55d7e1, 0xe3b1f8a2, 0xc60865e0, 0xf8112cc2, 0x93d6b989, 0xc1cf8477, 0x812b7f3c, 0x8c776893, 0xcea9b7e1, 0xdb51dd82, 0xcf9e6886, 0xc2a7551c, 0xa9e3e82b, 0xe77979d1, 0xead7c4bb, 0xeda04895, 0xbe61724c};
 
-uint32_t rotateleft32(uint32_t a, uint32_t b) {
+struct qx_state {
+    uint32_t q[5][5];
+    uint32_t t[5][5];
+    uint32_t o[8];
+    int rounds;
+};
+
+uint32_t qx_rotl(uint32_t a, int b) {
     return ((a << b) | (a >> (32 - b)));
 }
 
-struct qx_state {
-    uint32_t q[16];
-    uint32_t t[16];
-};
-
 void qx_init(struct qx_state *state) {
-    state->q[0] = qx_c0[0];
-    state->q[1] = qx_c0[1];
-    state->q[2] = qx_c0[2];
-    state->q[3] = qx_c0[3];
-    state->q[4] = qx_c0[4];
-    state->q[5] = qx_c0[5];
-    state->q[6] = qx_c0[6];
-    state->q[7] = qx_c0[7];
-    state->q[8] = qx_c0[8];
-    state->q[9] = qx_c0[9];
-    state->q[10] = qx_c0[10];
-    state->q[11] = qx_c0[11];
-    state->q[12] = qx_c0[12];
-    state->q[13] = qx_c0[13];
-    state->q[14] = qx_c0[14];
-    state->q[15] = qx_c0[15];
+    state->rounds = 25;
+    state->q[0][0] = qx_c0[0];
+    state->q[0][1] = qx_c0[1];
+    state->q[0][2] = qx_c0[2];
+    state->q[0][3] = qx_c0[3];
+    state->q[0][4] = qx_c0[4];
+    state->q[1][0] = qx_c0[5];
+    state->q[1][1] = qx_c0[6];
+    state->q[1][2] = qx_c0[7];
+    state->q[1][3] = qx_c0[8];
+    state->q[1][4] = qx_c0[9];
+    state->q[2][0] = qx_c0[10];
+    state->q[2][1] = qx_c0[11];
+    state->q[2][2] = qx_c0[12];
+    state->q[2][3] = qx_c0[13];
+    state->q[2][4] = qx_c0[14];
+    state->q[3][0] = qx_c0[15];
+    state->q[3][1] = qx_c0[16];
+    state->q[3][2] = qx_c0[17];
+    state->q[3][3] = qx_c0[18];
+    state->q[3][4] = qx_c0[19];
+    state->q[4][0] = qx_c0[20];
+    state->q[4][1] = qx_c0[21];
+    state->q[4][2] = qx_c0[22];
+    state->q[4][3] = qx_c0[23];
+    state->q[4][4] = qx_c0[24];
 }
 
-void qx_roundA(struct qx_state *state) {
-    state->q[8] += rotateleft32((state->q[7] ^ state->q[4]), 12);
-    state->q[6] ^= rotateleft32((state->q[8] + state->q[11]), 7);
-    state->q[3] += rotateleft32((state->q[6] ^ state->q[5]), 9);
-    state->q[15] ^= rotateleft32((state->q[9] + state->q[10]), 21);
-    state->q[10] += rotateleft32((state->q[2] ^ state->q[1]), 12);
-    state->q[5] ^= rotateleft32((state->q[10] + state->q[14]), 7);
-    state->q[13] += rotateleft32((state->q[3] ^ state->q[0]), 9);
-    state->q[12] ^= rotateleft32((state->q[13] + state->q[12]), 21);
-    state->q[7] += rotateleft32((state->q[12] ^ state->q[8]), 12);
-    state->q[11] ^= rotateleft32((state->q[4] + state->q[6]), 7);
-    state->q[2] += rotateleft32((state->q[5] ^ state->q[13]), 9);
-    state->q[1] ^= rotateleft32((state->q[1] + state->q[7]), 21);
-    state->q[0] += rotateleft32((state->q[14] ^ state->q[3]), 12);
-    state->q[14] ^= rotateleft32((state->q[0] + state->q[9]), 7);
-    state->q[9] += rotateleft32((state->q[11] ^ state->q[15]), 9);
-    state->q[4] ^= rotateleft32((state->q[15] + state->q[2]), 21);
-}
+void qx_keysetup(struct qx_state *state, uint8_t *key, uint8_t *nonce) {
+    qx_init(state);
 
-void qx_roundB(struct qx_state *state) {
-    state->q[1] = rotateleft32((state->q[1] ^ state->q[0]), 15);
-    state->q[3] = rotateleft32((state->q[3] ^ state->q[2]), 8);
-    state->q[5] = rotateleft32((state->q[5] ^ state->q[4]), 16);
-    state->q[7] = rotateleft32((state->q[7] ^ state->q[6]), 24);
-    state->q[9] = rotateleft32((state->q[9] ^ state->q[8]), 15);
-    state->q[11] = rotateleft32((state->q[11] ^ state->q[10]), 8);
-    state->q[13] = rotateleft32((state->q[13] ^ state->q[12]), 16);
-    state->q[15] = rotateleft32((state->q[15] ^ state->q[14]), 24);
-    state->q[0] = rotateleft32((state->q[0] ^ state->q[1]), 15);
-    state->q[2] = rotateleft32((state->q[2] ^ state->q[3]), 8);
-    state->q[4] = rotateleft32((state->q[4] ^ state->q[5]), 16);
-    state->q[6] = rotateleft32((state->q[6] ^ state->q[7]), 24);
-    state->q[8] = rotateleft32((state->q[8] ^ state->q[9]), 15);
-    state->q[10] = rotateleft32((state->q[10] ^ state->q[11]), 8);
-    state->q[12] = rotateleft32((state->q[12] ^ state->q[13]), 16);
-    state->q[14] = rotateleft32((state->q[14] ^ state->q[15]), 24);
-}
-
-void qx_rotate_words(struct qx_state *state) {
-    state->t[0] = state->q[0];
-    state->t[1] = state->q[1];
-    state->t[2] = state->q[2];
-    state->t[3] = state->q[3];
-    state->t[4] = state->q[4];
-    state->t[5] = state->q[5];
-    state->t[6] = state->q[6];
-    state->t[7] = state->q[7];
-    state->t[8] = state->q[8];
-    state->t[9] = state->q[9];
-    state->t[10] = state->q[10];
-    state->t[11] = state->q[11];
-    state->t[12] = state->q[12];
-    state->t[13] = state->q[13];
-    state->t[14] = state->q[14];
-    state->t[15] = state->q[15];
-
-    state->q[1] = state->t[0];
-    state->q[2] = state->t[1];
-    state->q[3] = state->t[2];
-    state->q[4] = state->t[3];
-    state->q[5] = state->t[4];
-    state->q[6] = state->t[5];
-    state->q[7] = state->t[6];
-    state->q[8] = state->t[7];
-    state->q[9] = state->t[8];
-    state->q[10] = state->t[9];
-    state->q[11] = state->t[10];
-    state->q[12] = state->t[11];
-    state->q[13] = state->t[12];
-    state->q[14] = state->t[13];
-    state->q[15] = state->t[14];
-    state->q[0] = state->t[15];
+    state->q[0][0] ^= ((key[0] << 24) + (key[1] << 16) + (key[2] << 8) + key[3]);
+    state->q[1][0] ^= ((key[4] << 24) + (key[5] << 16) + (key[6] << 8) + key[7]);
+    state->q[2][0] ^= ((key[8] << 24) + (key[9] << 16) + (key[10] << 8) + key[11]);
+    state->q[3][0] ^= ((key[12] << 24) + (key[13] << 16) + (key[14] << 8) + key[15]);
+    state->q[4][0] ^= ((key[16] << 24) + (key[17] << 16) + (key[18] << 8) + key[19]);
+    state->q[0][1] ^= ((key[20] << 24) + (key[21] << 16) + (key[22] << 8) + key[23]);
+    state->q[1][1] ^= ((key[24] << 24) + (key[25] << 16) + (key[26] << 8) + key[27]);
+    state->q[2][1] ^= ((key[28] << 24) + (key[29] << 16) + (key[30] << 8) + key[31]);
+    state->q[3][1] ^= ((nonce[0] << 24) + (nonce[1] << 16) + (nonce[2] << 8) + nonce[3]);
+    state->q[4][1] ^= ((nonce[4] << 24) + (nonce[5] << 16) + (nonce[6] << 8) + nonce[7]);
+    state->q[0][2] ^= ((nonce[8] << 24) + (nonce[9] << 16) + (nonce[10] << 8) + nonce[11]);
+    state->q[1][2] ^= ((nonce[12] << 24) + (nonce[13] << 16) + (nonce[14] << 8) + nonce[15]);
 
 }
 
 void qx_absorb(struct qx_state *state, uint8_t * block) {
-    state->q[0] ^= ((block[0] << 24) + (block[1] << 16) + (block[2] << 8) + block[3]);
-    state->q[1] ^= ((block[4] << 24) + (block[5] << 16) + (block[6] << 8) + block[7]);
-    state->q[2] ^= ((block[8] << 24) + (block[9] << 16) + (block[10] << 8) + block[11]);
-    state->q[3] ^= ((block[12] << 24) + (block[13] << 16) + (block[14] << 8) + block[15]);
-    state->q[4] ^= ((block[16] << 24) + (block[17] << 16) + (block[18] << 8) + block[19]);
-    state->q[5] ^= ((block[20] << 24) + (block[21] << 16) + (block[22] << 8) + block[23]);
-    state->q[6] ^= ((block[24] << 24) + (block[25] << 16) + (block[26] << 8) + block[27]);
-    state->q[7] ^= ((block[28] << 24) + (block[29] << 16) + (block[30] << 8) + block[31]);
+    state->q[0][0] ^= ((block[0] << 24) + (block[1] << 16) + (block[2] << 8) + block[3]);
+    state->q[1][1] ^= ((block[4] << 24) + (block[5] << 16) + (block[6] << 8) + block[7]);
+    state->q[2][2] ^= ((block[8] << 24) + (block[9] << 16) + (block[10] << 8) + block[11]);
+    state->q[3][3] ^= ((block[12] << 24) + (block[13] << 16) + (block[14] << 8) + block[15]);
+    state->q[4][4] ^= ((block[16] << 24) + (block[17] << 16) + (block[18] << 8) + block[19]);
+    state->q[0][1] ^= ((block[20] << 24) + (block[21] << 16) + (block[22] << 8) + block[23]);
+    state->q[1][2] ^= ((block[24] << 24) + (block[25] << 16) + (block[26] << 8) + block[27]);
+    state->q[2][3] ^= ((block[28] << 24) + (block[29] << 16) + (block[30] << 8) + block[31]);
 }
 
-void qx_rounds(struct qx_state *state, int rounds) {
-    for (int r = 0; r < rounds; r++) {
+void qx_roundA(struct qx_state *state) { 
+    state->q[0][0] += (state->q[1][3] + state->q[3][2]);
+    state->q[1][1] += (state->q[2][4] + state->q[4][3]);
+    state->q[2][2] += (state->q[3][0] + state->q[0][4]);
+    state->q[3][3] += (state->q[4][1] + state->q[1][0]);
+    state->q[4][4] += (state->q[0][2] + state->q[2][0]);
+}   
+
+void qx_roundB(struct qx_state *state) {
+    state->q[3][2] ^= (~qx_rotl(state->q[4][2], 2) & qx_rotl(state->q[0][0], 3));
+    state->q[4][3] ^= (~state->q[1][1] & qx_rotl(state->q[0][3], 6));
+    state->q[0][4] ^= (~qx_rotl(state->q[1][4], 4) & state->q[2][2]);
+    state->q[1][0] ^= (~qx_rotl(state->q[3][3], 11) & qx_rotl(state->q[2][0], 8));
+    state->q[2][1] ^= (~state->q[3][1] & state->q[4][4]);
+}
+
+void qx_roundC(struct qx_state *state) {
+    state->q[4][2] += (state->q[3][2] + state->q[2][3]);
+    state->q[0][3] += (state->q[4][3] + state->q[3][4]);
+    state->q[1][4] += (state->q[0][4] + state->q[4][0]);
+    state->q[2][0] += (state->q[1][0] + state->q[0][1]);
+    state->q[3][1] += (state->q[2][1] + state->q[1][2]);
+}
+
+void qx_roundD(struct qx_state *state) {
+    state->q[2][3] ^= (~qx_rotl(state->q[4][2], 10) & qx_rotl(state->q[1][3], 21));
+    state->q[3][4] ^= (~qx_rotl(state->q[0][3], 14) & state->q[2][4]);
+    state->q[4][0] ^= (~qx_rotl(state->q[1][4], 28) & qx_rotl(state->q[3][0], 31));
+    state->q[0][1] ^= (~qx_rotl(state->q[2][0], 20) & qx_rotl(state->q[4][1], 9));
+    state->q[1][2] ^= (~qx_rotl(state->q[3][1], 23) & state->q[0][2]);
+}
+
+void qx_roundE(struct qx_state *state) {
+    state->q[1][3] += (state->q[2][3] + state->q[0][0]);
+    state->q[2][4] += (state->q[3][4] + state->q[1][1]);
+    state->q[3][0] += (state->q[4][0] + state->q[2][2]);
+    state->q[4][1] += (state->q[0][1] + state->q[3][3]);
+    state->q[0][2] += (state->q[1][2] + state->q[4][4]);
+}
+
+void qx_rotate_words(struct qx_state *state) {
+    state->t[0][0] = state->q[0][0];
+    state->t[0][1] = state->q[0][1];
+    state->t[0][2] = state->q[0][2];
+    state->t[0][3] = state->q[0][3];
+    state->t[0][4] = state->q[0][4];
+    state->t[1][0] = state->q[1][0];
+    state->t[1][1] = state->q[1][1];
+    state->t[1][2] = state->q[1][2];
+    state->t[1][3] = state->q[1][3];
+    state->t[1][4] = state->q[1][4];
+    state->t[2][0] = state->q[2][0];
+    state->t[2][1] = state->q[2][1];
+    state->t[2][2] = state->q[2][2];
+    state->t[2][3] = state->q[2][3];
+    state->t[2][4] = state->q[2][4];
+    state->t[3][0] = state->q[3][0];
+    state->t[3][1] = state->q[3][1];
+    state->t[3][2] = state->q[3][2];
+    state->t[3][3] = state->q[3][3];
+    state->t[3][4] = state->q[3][4];
+    state->t[4][0] = state->q[4][0];
+    state->t[4][1] = state->q[4][1];
+    state->t[4][2] = state->q[4][2];
+    state->t[4][3] = state->q[4][3];
+    state->t[4][4] = state->q[4][4];
+
+    state->q[0][0] = state->t[1][0];
+    state->q[0][1] = state->t[1][1];
+    state->q[0][2] = state->t[1][2];
+    state->q[0][3] = state->t[1][3];
+    state->q[0][4] = state->t[1][4];
+    state->q[1][0] = state->t[2][0];
+    state->q[1][1] = state->t[2][1];
+    state->q[1][2] = state->t[2][2];
+    state->q[1][3] = state->t[2][3];
+    state->q[1][4] = state->t[2][4];
+    state->q[2][0] = state->t[3][0];
+    state->q[2][1] = state->t[3][1];
+    state->q[2][2] = state->t[3][2];
+    state->q[2][3] = state->t[3][3];
+    state->q[2][4] = state->t[3][4];
+    state->q[3][0] = state->t[4][0];
+    state->q[3][1] = state->t[4][1];
+    state->q[3][2] = state->t[4][2];
+    state->q[3][3] = state->t[4][3];
+    state->q[3][4] = state->t[4][4];
+    state->q[4][0] = state->t[0][4];
+    state->q[4][1] = state->t[0][0];
+    state->q[4][2] = state->t[0][1];
+    state->q[4][3] = state->t[0][2];
+    state->q[4][4] = state->t[0][3];
+}
+
+void qx_rounds(struct qx_state *state) {
+    for (int r = 0; r < state->rounds; r++) {
         qx_roundA(state);
         qx_roundB(state);
+        qx_roundC(state);
+        qx_roundD(state);
+        qx_roundE(state);
         qx_rotate_words(state);
     }
 }
 
-void qx_output(struct qx_state * state, uint8_t * digest) {
-    digest[0] = (state->q[0] >> 24);
-    digest[1] = (state->q[0] >> 16);
-    digest[2] = (state->q[0] >> 8);
-    digest[3] = state->q[0];
-    digest[4] = (state->q[1] >> 24);
-    digest[5] = (state->q[1] >> 16);
-    digest[6] = (state->q[1] >> 8);
-    digest[7] = state->q[1];
-    digest[8] = (state->q[2] >> 24);
-    digest[9] = (state->q[2] >> 16);
-    digest[10] = (state->q[2] >> 8);
-    digest[11] = state->q[2];
-    digest[12] = (state->q[3] >> 24);
-    digest[13] = (state->q[3] >> 16);
-    digest[14] = (state->q[3] >> 8);
-    digest[15] = state->q[3];
-    digest[16] = (state->q[4] >> 24);
-    digest[17] = (state->q[4] >> 16);
-    digest[18] = (state->q[4] >> 8);
-    digest[19] = state->q[4];
-    digest[20] = (state->q[5] >> 24);
-    digest[21] = (state->q[5] >> 16);
-    digest[22] = (state->q[5] >> 8);
-    digest[23] = state->q[5];
-    digest[24] = (state->q[6] >> 24);
-    digest[25] = (state->q[6] >> 16);
-    digest[26] = (state->q[6] >> 8);
-    digest[27] = state->q[6];
-    digest[28] = (state->q[7] >> 24);
-    digest[29] = (state->q[7] >> 16);
-    digest[30] = (state->q[7] >> 8);
-    digest[31] = state->q[7];
+void qx_output(struct qx_state *state, uint8_t *digest) {
+    state->o[0] = state->q[0][0] ^ state->q[2][4] ^ state->q[4][0];
+    state->o[1] = state->q[1][1] ^ state->q[3][0] ^ state->q[0][4];
+    state->o[2] = state->q[2][2] ^ state->q[4][1] ^ state->q[1][0];
+    state->o[3] = state->q[3][3] ^ state->q[0][2] ^ state->q[2][1];
+    state->o[4] = state->q[4][4] ^ state->q[1][3] ^ state->q[3][2];
+    state->o[5] = state->q[0][1] ^ state->q[3][4] ^ state->q[4][3];
+    state->o[6] = state->q[1][2] ^ state->q[0][3] ^ state->q[2][0];
+    state->o[7] = state->q[2][3] ^ state->q[1][4] ^ state->q[3][1];
+
+    digest[0] = (state->o[0] & 0xFF000000) >> 24;
+    digest[1] = (state->o[0] & 0x00FF0000) >> 16;
+    digest[2] = (state->o[0] & 0x0000FF00) >> 8;
+    digest[3] = (state->o[0] & 0x000000FF);
+    digest[4] = (state->o[1] & 0xFF000000) >> 24;
+    digest[5] = (state->o[1] & 0x00FF0000) >> 16;
+    digest[6] = (state->o[1] & 0x0000FF00) >> 8;
+    digest[7] = (state->o[1] & 0x000000FF);
+    digest[8] = (state->o[2] & 0xFF000000) >> 24;
+    digest[9] = (state->o[2] & 0x00FF0000) >> 16;
+    digest[10] = (state->o[2] & 0x0000FF00) >> 8;
+    digest[11] = (state->o[2] & 0x000000FF);
+    digest[12] = (state->o[3] & 0xFF000000) >> 24;
+    digest[13] = (state->o[3] & 0x00FF0000) >> 16;
+    digest[14] = (state->o[3] & 0x0000FF00) >> 8;
+    digest[15] = (state->o[3] & 0x000000FF);
+    digest[16] = (state->o[4] & 0xFF000000) >> 24;
+    digest[17] = (state->o[4] & 0x00FF0000) >> 16;
+    digest[18] = (state->o[4] & 0x0000FF00) >> 8;
+    digest[19] = (state->o[4] & 0x000000FF);
+    digest[20] = (state->o[5] & 0xFF000000) >> 24;
+    digest[21] = (state->o[5] & 0x00FF0000) >> 16;
+    digest[22] = (state->o[5] & 0x0000FF00) >> 8;
+    digest[23] = (state->o[5] & 0x000000FF);
+    digest[24] = (state->o[6] & 0xFF000000) >> 24;
+    digest[25] = (state->o[6] & 0x00FF0000) >> 16;
+    digest[26] = (state->o[6] & 0x0000FF00) >> 8;
+    digest[27] = (state->o[6] & 0x000000FF);
+    digest[28] = (state->o[7] & 0xFF000000) >> 24;
+    digest[29] = (state->o[7] & 0x00FF0000) >> 16;
+    digest[30] = (state->o[7] & 0x0000FF00) >> 8;
+    digest[31] = (state->o[7] & 0x000000FF);
 }
 
 void qx_hash_file(char * filename, uint8_t *digest) {
     uint8_t key[32] = {1};
     struct qx_state state;
     qx_init(&state);
-    int rounds = 64;
-    qx_rounds(&state, rounds);
     FILE *infile;
     int blocksize = 32;
     infile = fopen(filename, "rb");
@@ -186,7 +246,7 @@ void qx_hash_file(char * filename, uint8_t *digest) {
         }
         fread(&block, 1, blocksize, infile);
         qx_absorb(&state, block);
-        qx_rounds(&state, rounds);
+        qx_rounds(&state);
     }
     fclose(infile);
     qx_output(&state, digest);
@@ -196,9 +256,7 @@ void qx_hash_file_offset(char * filename, uint8_t *digest, int offset) {
     uint8_t key[32] = {0};
     struct qx_state state;
     qx_init(&state);
-    int rounds = 64;
     qx_absorb(&state, key);
-    qx_rounds(&state, rounds);
     FILE *infile;
     int blocksize = 32;
     int bufsize = 32;
@@ -219,7 +277,7 @@ void qx_hash_file_offset(char * filename, uint8_t *digest, int offset) {
         }
         fread(block, 1, bufsize, infile);
         qx_absorb(&state, block);
-        qx_rounds(&state, rounds);
+        qx_rounds(&state);
     }
     fclose(infile);
     qx_output(&state, digest);
@@ -228,9 +286,8 @@ void qx_hash_file_offset(char * filename, uint8_t *digest, int offset) {
 void qx_hmac_file(char * filename, uint8_t * key, uint8_t *digest) {
     struct qx_state state;
     qx_init(&state);
-    int rounds = 64;
     qx_absorb(&state, key);
-    qx_rounds(&state, rounds);
+    qx_rounds(&state);
     FILE *infile;
     int blocksize = 32;
     int bufsize = 32;
@@ -250,7 +307,7 @@ void qx_hmac_file(char * filename, uint8_t * key, uint8_t *digest) {
         }
         fread(block, 1, bufsize, infile);
         qx_absorb(&state, block);
-        qx_rounds(&state, rounds);
+        qx_rounds(&state);
     }
     fclose(infile);
     qx_output(&state, digest);
@@ -259,9 +316,8 @@ void qx_hmac_file(char * filename, uint8_t * key, uint8_t *digest) {
 void qx_hmac_file_verify(char * filename, uint8_t * key, uint8_t *verify) {
     struct qx_state state;
     qx_init(&state);
-    int rounds = 64;
     qx_absorb(&state, key);
-    qx_rounds(&state, rounds);
+    qx_rounds(&state);
     FILE *infile;
     int blocksize = 32;
     int bufsize = 32;
@@ -282,7 +338,7 @@ void qx_hmac_file_verify(char * filename, uint8_t * key, uint8_t *verify) {
         }
         fread(block, 1, bufsize, infile);
         qx_absorb(&state, block);
-        qx_rounds(&state, rounds);
+        qx_rounds(&state);
     }
     fclose(infile);
     qx_output(&state, verify);
@@ -291,9 +347,8 @@ void qx_hmac_file_verify(char * filename, uint8_t * key, uint8_t *verify) {
 void qx_hmac_file_verify_offset(char * filename, uint8_t * key, uint8_t *verify, int offset) {
     struct qx_state state;
     qx_init(&state);
-    int rounds = 64;
     qx_absorb(&state, key);
-    qx_rounds(&state, rounds);
+    qx_rounds(&state);
     FILE *infile;
     int blocksize = 32;
     int bufsize = 32;
@@ -314,7 +369,7 @@ void qx_hmac_file_verify_offset(char * filename, uint8_t * key, uint8_t *verify,
         }
         fread(block, 1, bufsize, infile);
         qx_absorb(&state, block);
-        qx_rounds(&state, rounds);
+        qx_rounds(&state);
     }
     fclose(infile);
     qx_output(&state, verify);
@@ -378,9 +433,7 @@ int qx_hmac_file_read_verify_offset(char *filename, uint8_t *key, int offset) {
 
 void qx_kdf(unsigned char *password, int passlen, unsigned char *key, int iters) {
     struct qx_state state;
-    int rounds = 64;
     qx_init(&state);
-    qx_rounds(&state, rounds);
     int blocklen = 32;
     int blocks = passlen / 32;
     int extra = passlen % 32;
@@ -399,50 +452,12 @@ void qx_kdf(unsigned char *password, int passlen, unsigned char *key, int iters)
             c += 1;
         }
         qx_absorb(&state, block);
-        qx_rounds(&state, rounds);
+        qx_rounds(&state);
     }
     for (int i = 0; i < iters; i++) {
-        qx_rounds(&state, rounds);
+        qx_rounds(&state);
     }
     qx_output(&state, key);
-}
-
-void qx_crypt(char * in, char *out, uint8_t * key) {
-     uint8_t tmp[32] = {0};
-     struct qx_state state;
-     qx_init(&state);
-     qx_absorb(&state, key);
-     int rounds = 1;
-     qx_rounds(&state, rounds);
-     FILE *infile, *outfile;
-     int blocksize = 32;
-     int bufsize = 32;
-     infile = fopen(in, "rb");
-     outfile = fopen(out, "wb");
-     fseek(infile, 0, SEEK_END);
-     uint64_t datalen = ftell(infile);
-     fseek(infile, 0, SEEK_SET);
-     uint64_t blocks = datalen / blocksize;
-     int extra = datalen % blocksize;
-     if (extra != 0) {
-         blocks += 1;
-     }
-     for (int b = 0; b < blocks; b++) {
-         uint8_t block[32] = {0};
-         fread(block, 1, bufsize, infile);
-         if ((b == (blocks - 1)) && (extra != 0)) {
-             bufsize = extra;
-         }
-         qx_absorb(&state, tmp);
-         qx_rounds(&state, rounds);
-         qx_output(&state, tmp);
-         for (int i = 0; i < bufsize; i++) {
-             block[i] ^= tmp[i];
-         }
-         fwrite(block, 1, bufsize, outfile);
-    }
-    fclose(infile);
-    fclose(outfile);
 }
 
 void sign_hash_write(struct qloq_ctx *Sctx, char *filename) {
