@@ -1,3 +1,5 @@
+v2.6.1 - New Satanx Key Scheduler
+
 v2.6.0 - QX hash function / HMAC redesign, addition of ZX stream cipher based off of QX
 
 v2.5.1 - Addition of SatanX in CBC mode

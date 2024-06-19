@@ -21,7 +21,8 @@ struct satanx_state {
 
 struct satanx_ksa_state {
     uint64_t r[8];
-    uint64_t o;
+    uint64_t t[8];
+    uint64_t o[4];
 };
 
 uint64_t satanx_rotl(uint64_t a, int b) {
@@ -34,33 +35,39 @@ void satanx_F(struct satanx_state *state) {
 }
 
 void satanx_ksa_update(struct satanx_ksa_state *state) {
-    state->r[0] += state->r[3];
-    state->r[1] = zander3_rotl(state->r[1] ^ state->r[0], 10);
-    state->r[2] += state->r[7];
-    state->r[3] = zander3_rotl(state->r[3] ^ state->r[6], 6);
-    state->r[4] += state->r[2];
-    state->r[5] = zander3_rotl(state->r[5] ^ state->r[4], 2);
-    state->r[6] += state->r[5];
-    state->r[7] = zander3_rotl(state->r[7] ^ state->r[1], 1);
+    state->r[0] ^= (~satanx_rotl(state->r[4], 2) & satanx_rotl(state->r[5], 3));
+    state->r[1] ^= (~state->r[5] & satanx_rotl(state->r[4], 6));
+    state->r[2] ^= (~satanx_rotl(state->r[7], 4) & state->r[6]);
+    state->r[3] ^= (~satanx_rotl(state->r[6], 11) & satanx_rotl(state->r[7], 8));
 
-    state->r[7] += state->r[4];
-    state->r[4] = zander3_rotl(state->r[4] ^ state->r[7], 10);
-    state->r[5] += state->r[3];
-    state->r[6] = zander3_rotl(state->r[6] ^ state->r[2], 6);
-    state->r[3] += state->r[6];
-    state->r[2] = zander3_rotl(state->r[2] ^ state->r[0], 2);
-    state->r[1] += state->r[1];
-    state->r[0] = zander3_rotl(state->r[0] ^ state->r[5], 1);
+    state->r[4] ^= state->r[7];
+    state->r[5] ^= state->r[4];
+    state->r[6] ^= state->r[5];
+    state->r[7] ^= state->r[6];
 
-    state->o = 0;
-    state->o ^= state->r[0];
-    state->o ^= state->r[1];
-    state->o ^= state->r[2];
-    state->o ^= state->r[3];
-    state->o ^= state->r[4];
-    state->o ^= state->r[5];
-    state->o ^= state->r[6];
-    state->o ^= state->r[7];
+    state->o[0] = state->r[0] ^ state->r[4];
+    state->o[1] = state->r[1] ^ state->r[5];
+    state->o[2] = state->r[2] ^ state->r[6];
+    state->o[3] = state->r[3] ^ state->r[7];
+
+    state->t[0] = state->r[0];
+    state->t[1] = state->r[1];
+    state->t[2] = state->r[2];
+    state->t[3] = state->r[3];
+    state->t[4] = state->r[4];
+    state->t[5] = state->r[5];
+    state->t[6] = state->r[6];
+    state->t[7] = state->r[7];
+
+    state->r[0] = state->t[4];
+    state->r[1] = state->t[5];
+    state->r[2] = state->t[6];
+    state->r[3] = state->t[7];
+    state->r[4] = state->t[0];
+    state->r[5] = state->t[1];
+    state->r[6] = state->t[2];
+    state->r[7] = state->t[3];
+
 
 }
 
@@ -80,17 +87,16 @@ void satanx_ksa(struct satanx_state * state, uint8_t * key, int keylen) {
     kstate.r[6] = satanx_c0[6];
     kstate.r[7] = satanx_c0[7];
 
-    kstate.o = 0;
-
     for (i = 0; i < (keylen / 8); i++) {
         kstate.r[i] ^= ((uint64_t)key[c] << 56) + ((uint64_t)key[c+1] << 48) + ((uint64_t)key[c+2] << 40) + ((uint64_t)key[c+3] << 32) + ((uint64_t)key[c+4] << 24) + ((uint64_t)key[c+5] << 16) + ((uint64_t)key[c+6] << 8) + (uint64_t)key[c+7];
         c += 8;
     }
     for (i = 0; i < state->rounds; i++) {
-        for (s = 0; s < 4; s++) {
-            satanx_ksa_update(&kstate);
-            state->K[i][s] = kstate.o;
-        }
+        satanx_ksa_update(&kstate);
+        state->K[i][0] = kstate.o[0];
+        state->K[i][1] = kstate.o[1];
+        state->K[i][2] = kstate.o[2];
+        state->K[i][3] = kstate.o[3];
     }
 }
 
