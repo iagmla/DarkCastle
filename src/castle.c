@@ -12,16 +12,17 @@
 #include "ciphers/zanderfish4_cbc.c"
 #include "ciphers/nuqneh.c"
 #include "ciphers/akms2_cbc.c"
-#include "ciphers/jlyajbe.c"
+#include "ciphers/jiyajbe.c"
 #include "ciphers/satanx_cbc.c"
 #include "ciphers/zx.c"
+#include "ciphers/nuqvam.c"
 
 /* DarkCastle */
 /* by KryptoMagick (Karl Zander) */
 
 void usage() {
     printf("DarkCastle v2.6.1 - by KryptoMagick\n\n");
-    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njlyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\nzx               256 bit\n\n");
+    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njiyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\nzx               256 bit\n\n");
     printf("Usage:\ncastle <algorithm> -e <input file> <output file> <pk file> <sk file>\n");
     printf("castle <algorithm> -d <input file> <output file> <pk file> <sk file>\n");
 }
@@ -90,12 +91,12 @@ int main(int argc, char *argv[]) {
             akms2_cbc_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
     }
-    else if (strcmp(algorithm, "jlyajbe") == 0) {
+    else if (strcmp(algorithm, "jiyajbe") == 0) {
         if (strcmp(mode, encrypt_symbol) == 0) {
-            jlyajbe_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+            jiyajbe_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
         else if (strcmp(mode, decrypt_symbol) == 0) {
-            jlyajbe_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+            jiyajbe_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
     }
     else if (strcmp(algorithm, "satanx") == 0) {
@@ -112,6 +113,14 @@ int main(int argc, char *argv[]) {
         }
         else if (strcmp(mode, decrypt_symbol) == 0) {
             zx_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+        }
+    }
+    else if (strcmp(algorithm, "nuqvam") == 0) {
+        if (strcmp(mode, encrypt_symbol) == 0) {
+            nuqvam_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+        }   
+        else if (strcmp(mode, decrypt_symbol) == 0) {
+            nuqvam_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
     }
     printf("\n");

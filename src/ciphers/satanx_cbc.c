@@ -30,8 +30,8 @@ uint64_t satanx_rotl(uint64_t a, int b) {
 }
 
 void satanx_F(struct satanx_state *state) {
-    state->S[0] ^= (~satanx_rotl(state->S[2], 2) & satanx_rotl(state->S[3], 3));
-    state->S[1] ^= (~state->S[3] & satanx_rotl(state->S[2], 6));
+    state->S[0] ^= (~satanx_rotl(state->S[2], 3) & satanx_rotl(state->S[3], 7));
+    state->S[1] ^= (~state->S[3] & satanx_rotl(state->S[2], 13));
 }
 
 void satanx_ksa_update(struct satanx_ksa_state *state) {
@@ -67,8 +67,6 @@ void satanx_ksa_update(struct satanx_ksa_state *state) {
     state->r[5] = state->t[1];
     state->r[6] = state->t[2];
     state->r[7] = state->t[3];
-
-
 }
 
 void satanx_ksa(struct satanx_state * state, uint8_t * key, int keylen) {

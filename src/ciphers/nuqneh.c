@@ -1,6 +1,8 @@
 /* NuqneH */
+/* meaning (what do you want?) in Klingon */
 /* by KryptoMagick (Karl Zander) */
 /* 256 bit key / 512 bit state / 128 bit nonce */
+/* 256 bit output block */
 /* 24 rounds */
 
 struct nuqneh_state {

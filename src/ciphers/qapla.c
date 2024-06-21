@@ -1,6 +1,8 @@
 /* Qapla */
+/* meaning (success) in Klingon */
 /* by KryptoMagick (Karl Zander) */
 /* 256 bit key / 512 bit state / 128 bit nonce */
+/* 256 bit output block */
 /* 20 rounds */
 
 uint64_t Q[2] = {
