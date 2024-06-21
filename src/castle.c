@@ -21,8 +21,8 @@
 /* by KryptoMagick (Karl Zander) */
 
 void usage() {
-    printf("DarkCastle v2.6.1 - by KryptoMagick\n\n");
-    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njiyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\nzx               256 bit\n\n");
+    printf("DarkCastle v2.6.2 - by KryptoMagick\n\n");
+    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njiyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\nnuqvam           256 bit\nzx               256 bit\n\n");
     printf("Usage:\ncastle <algorithm> -e <input file> <output file> <pk file> <sk file>\n");
     printf("castle <algorithm> -d <input file> <output file> <pk file> <sk file>\n");
 }
