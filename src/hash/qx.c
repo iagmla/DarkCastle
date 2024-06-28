@@ -375,11 +375,11 @@ void qx_hmac_file_verify_offset(char * filename, uint8_t * key, uint8_t *verify,
     qx_output(&state, verify);
 }
 
-
-void qx_hmac_file_write(char *filename, uint8_t *key) {
+void qx_hmac_file_write(char *filename, uint8_t *key, uint8_t *hmac_hash) {
     uint8_t digest[32];
     FILE *outfile;
     qx_hmac_file(filename, key, digest);
+    memcpy(hmac_hash, digest, 32*sizeof(uint8_t));
     outfile = fopen(filename, "a");
     fwrite(digest, 1, 32, outfile);
     fclose(outfile);
@@ -460,19 +460,17 @@ void qx_kdf(unsigned char *password, int passlen, unsigned char *key, int iters)
     qx_output(&state, key);
 }
 
-void sign_hash_write(struct qloq_ctx *Sctx, char *filename) {
+void sign_hash_write(struct qloq_ctx *Sctx, char *filename, uint8_t *hmac_hash) {
     int S_len = 768;
     uint8_t sig[S_len];
-    uint8_t h[32];
     uint8_t X[32];
     uint8_t nonce[32];
     BIGNUM *S;
     S = BN_new();
     BIGNUM *H;
     H = BN_new();
-    qx_hash_file(filename, h);
     urandom(nonce, 32);
-    mypad_encrypt(h, nonce, X);
+    mypad_encrypt(hmac_hash, nonce, X);
     BN_bin2bn(X, 32, H);
     sign(Sctx, S, H);
     BN_bn2bin(S, sig);
@@ -483,12 +481,11 @@ void sign_hash_write(struct qloq_ctx *Sctx, char *filename) {
     fclose(infile);
 }
 
-void verify_sig_read(struct qloq_ctx *Sctx, char *filename) {
+void verify_sig_read(struct qloq_ctx *Sctx, char *filename, uint8_t *hmac_hash) {
     int S_len = 768;
     uint8_t sig[S_len];
     uint8_t X[32];
     uint8_t nonce[32];
-    uint8_t h[32];
     BIGNUM *Ssig;
     Ssig = BN_new();
     BIGNUM *S;
@@ -496,7 +493,6 @@ void verify_sig_read(struct qloq_ctx *Sctx, char *filename) {
     BIGNUM *H;
     H = BN_new();
     FILE *infile;
-    qx_hash_file_offset(filename, h, (S_len + 32));
     infile = fopen(filename, "rb");
     fseek(infile, 0, SEEK_END);
     uint64_t datalen = ftell(infile);
@@ -507,7 +503,7 @@ void verify_sig_read(struct qloq_ctx *Sctx, char *filename) {
     fread(sig, 1, S_len, infile);
     fclose(infile);
     BN_bin2bn(sig, S_len, Ssig);
-    mypad_encrypt(nonce, h, X);
+    mypad_encrypt(nonce, hmac_hash, X);
     BN_bin2bn(X, 32, H);
 
     if (verify(Sctx, Ssig, H) != 0) {
@@ -515,4 +511,3 @@ void verify_sig_read(struct qloq_ctx *Sctx, char *filename) {
         exit(2);
     }
 }
-

@@ -166,9 +166,10 @@ void nuqneh_encrypt(char *inputfile, char *outputfile, char *pkfile, char *skfil
     fclose(infile);
     fclose(outfile);
     uint8_t kdf_key[32];
+    uint8_t hmac_hash[32];
     qx_kdf(key, 32, kdf_key, 10000);
-    qx_hmac_file_write(outputfile, kdf_key);
-    sign_hash_write(&Sctx, outputfile);
+    qx_hmac_file_write(outputfile, kdf_key, hmac_hash);
+    sign_hash_write(&Sctx, outputfile, hmac_hash);
 }
 
 void nuqneh_decrypt(char *inputfile, char *outputfile, char *pkfile, char *skfile) {
@@ -178,7 +179,17 @@ void nuqneh_decrypt(char *inputfile, char *outputfile, char *pkfile, char *skfil
     struct qloq_ctx TMPBctx;
     load_pkfile(pkfile, &TMPActx, &Sctx);
     load_skfile(skfile, &ctx, &TMPBctx);
-    verify_sig_read(&Sctx, inputfile);
+    uint8_t hmac_hash[32];
+    FILE *infile, *outfile;
+    infile = fopen(inputfile, "rb");
+    fseek(infile, 0, SEEK_END);
+    uint32_t datalen = ftell(infile);
+    fseek(infile, 0, SEEK_SET);
+    fseek(infile, datalen - 768 - 32 - 32, SEEK_SET);
+    fread(hmac_hash, 1, 32, infile);
+    fclose(infile);
+
+    verify_sig_read(&Sctx, inputfile, hmac_hash);
     uint8_t key[32];
     uint8_t key_padded[32];
     uint8_t pad_nonce[32];
@@ -188,10 +199,9 @@ void nuqneh_decrypt(char *inputfile, char *outputfile, char *pkfile, char *skfil
     int blocklen = 32;
     int bufsize = 32;
     uint8_t nonce[16];
-    FILE *infile, *outfile;
     infile = fopen(inputfile, "rb");
     fseek(infile, 0, SEEK_END);
-    uint32_t datalen = ftell(infile);
+    datalen = ftell(infile);
     datalen = datalen - 16 - 768 - 32 - 32 - 768 - 32;
     fseek(infile, 0, SEEK_SET);
     fread(pad_nonce, 1, 32, infile);

@@ -105,7 +105,7 @@ void pkg_pk(struct qloq_ctx * ctx, struct qloq_ctx *Sctx, char * prefix) {
     char *SMnum[3];
     FILE *pkfile;
     strcpy(pkfilename, prefix);
-    strcat(pkfilename, ".pk");
+    strcat(pkfilename, ".qloq.pk");
     int pkbytes = BN_num_bytes(ctx->pk);
     int nbytes = BN_num_bytes(ctx->n);
     int Mbytes = BN_num_bytes(ctx->M);
@@ -156,7 +156,7 @@ void pkg_sk(struct qloq_ctx * ctx, struct qloq_ctx *Sctx, char * prefix) {
     char *SMnum[3];
     FILE *skfile;
     strcpy(skfilename, prefix);
-    strcat(skfilename, ".sk");
+    strcat(skfilename, ".qloq.sk");
     int skbytes = BN_num_bytes(ctx->sk);
     int nbytes = BN_num_bytes(ctx->n);
     int Mbytes = BN_num_bytes(ctx->M);
@@ -206,9 +206,9 @@ void pkg_keys(struct qloq_ctx * ctx, char * prefix) {
     char Mnum[3];
     FILE *tmpfile;
     strcpy(pkfilename, prefix);
-    strcat(pkfilename, ".pk");
+    strcat(pkfilename, ".qloq.pk");
     strcpy(skfilename, prefix);
-    strcat(skfilename, ".sk");
+    strcat(skfilename, ".qloq.sk");
     int pkbytes = BN_num_bytes(ctx->pk);
     int skbytes = BN_num_bytes(ctx->sk);
     int nbytes = BN_num_bytes(ctx->n);

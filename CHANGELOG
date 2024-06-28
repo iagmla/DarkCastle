@@ -1,4 +1,4 @@
-v2.6.2 - Addition of Nuqvam stream cipher, cosmetic correction of cipher Jiyajbe's name
+v2.7.0 -  Change keygen to output file extensions as .qloq.pk and .qloq.sk. Sign HMAC tag instead of entire message (speed improvement).
 
 v2.6.1 - New Satanx Key Scheduler
 
