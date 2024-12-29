@@ -8,7 +8,7 @@
 #include "pki/qloqRSA.c"
 #include "hash/qx.c"
 #include "ciphers/zanderfish3_cbc.c"
-#include "ciphers/qapla.c"
+#include "ciphers/x1517141454138120.c"
 #include "ciphers/zanderfish4_cbc.c"
 #include "ciphers/nuqneh.c"
 #include "ciphers/akms2_cbc.c"
@@ -21,8 +21,8 @@
 /* by KryptoMagick (Karl Zander) */
 
 void usage() {
-    printf("DarkCastle v2.7.0 - by KryptoMagick\n\n");
-    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nqapla            256 bit\njiyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\nnuqvam           256 bit\nzx               256 bit\n\n");
+    printf("DarkCastle v2.7.1 - by KryptoMagick\n\n");
+    printf("Algorithms:\n***********\nakms2            256 bit\nsatanx           256 bit\nzanderfish3      256 bit\nzanderfish4      256 bit  *** Recommended Block Cipher\nx1517141454138120\njiyajbe          256 bit\nnuqneh           256 bit  *** Recommended Stream Cipher\nnuqvam           256 bit\nzx               256 bit\n\n");
     printf("Usage:\ncastle <algorithm> -e <input file> <output file> <pk file> <sk file>\n");
     printf("castle <algorithm> -d <input file> <output file> <pk file> <sk file>\n");
 }
@@ -59,12 +59,12 @@ int main(int argc, char *argv[]) {
             zanderfish3_cbc_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
     }
-    else if (strcmp(algorithm, "qapla") == 0) {
+    else if (strcmp(algorithm, "x1517141454138120") == 0) {
         if (strcmp(mode, encrypt_symbol) == 0) {
-            qapla_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+            X1517141454138120_encrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
         else if (strcmp(mode, decrypt_symbol) == 0) {
-            qapla_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
+            X1517141454138120_decrypt(infile_name, outfile_name, pkfile_name, skfile_name);
         }
     }
     else if (strcmp(algorithm, "zanderfish4") == 0) {

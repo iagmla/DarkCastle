@@ -5,6 +5,10 @@
 /* 256 bit output block */
 /* 24 rounds */
 
+uint64_t Q[2] = {
+0x98d57011ef2469a7, 0x0c7e53dd9eb185bc,
+};
+
 struct nuqneh_state {
     uint64_t r[8];
     uint64_t o[4];

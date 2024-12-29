@@ -1,3 +1,5 @@
+v2.7.1 - X1517141454138120
+
 v2.7.0 -  Change keygen to output file extensions as .qloq.pk and .qloq.sk. Sign HMAC tag instead of entire message (speed improvement).
 
 v2.6.1 - New Satanx Key Scheduler
